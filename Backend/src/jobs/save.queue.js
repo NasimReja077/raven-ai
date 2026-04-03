@@ -53,7 +53,7 @@ export const addSaveJob = async ({ saveId, userId }) => {
                userId: userId.toString(),
           },
           {
-               jobId: `save:${saveId}`,
+               jobId: `save-${saveId}`,
           }
      );
 };
@@ -75,7 +75,7 @@ export const addReprocessJob = async ({ saveId, userId, full = false }) => {
                full,
           },
           {
-               jobId: `reprocess:${saveId}:${Date.now()}`, // unique — allow multiple reprocess calls
+               jobId: `reprocess-${saveId}:${Date.now()}`, // unique — allow multiple reprocess calls
                priority: 5, // lower priority than fresh saves
           }
      );
@@ -90,7 +90,7 @@ export const addBulkSaveJobs = async (items) => {
      const jobs = items.map(({ saveId, userId }) => ({
           name: "process-save",
           data: { saveId: saveId.toString(), userId: userId.toString() },
-          opts: { jobId: `save:${saveId}` },
+          opts: { jobId: `save-${saveId}` },
      }));
      return queue.addBulk(jobs);
 };
