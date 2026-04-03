@@ -154,7 +154,7 @@ export const generateEmbeddingsBatch = async (texts) => {
      const result = [];
 
      for (let i = 0; i < validTexts.length; i += BATCH_SIZE) {
-          const batch = validTexts.slice(i, i + BATCH_SIZE),
+          const batch = validTexts.slice(i, i + BATCH_SIZE);
           const response = await client.embeddings.create({
                model: EMBED_MODEL,
                inputs: batch,
@@ -402,4 +402,17 @@ Return ONLY valid JSON:
      } catch {
           return { isContradiction: false, reason: "" };
      }
+};
+
+// Cluster label
+export const generateClusterLabel = async (titles = []) => {
+  try {
+    const result = await generateStructuredOutput(
+      `These saved items belong to the same cluster. Give a short 2-4 word label for their common theme.\n\nItems:\n${titles.slice(0, 10).map((t, i) => `${i + 1}. ${t}`).join("\n")}\n\nReturn ONLY: { "label": "short label", "description": "one sentence" }`,
+      { model: MODEL_SMALL, maxTokens: 150 }
+    );
+    return { label: result.label || "Knowledge Cluster", description: result.description || "" };
+  } catch {
+    return { label: "Knowledge Cluster", description: "" };
+  }
 };
