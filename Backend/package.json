@@ -7,7 +7,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "worker": "node src/workers/processItem.worker.js",
+    "cluster": "node src/scripts/runClustering.js"
   },
   "repository": {
     "type": "git",
@@ -27,22 +29,37 @@
   },
   "homepage": "https://github.com/NasimReja077/raven-ai#readme",
   "dependencies": {
+    "@langchain/core": "^1.1.38",
+    "@langchain/textsplitters": "^1.0.1",
+    "@mistralai/mistralai": "^2.1.2",
+    "@mozilla/readability": "^0.6.0",
+    "@pinecone-database/pinecone": "^7.1.0",
     "axios": "^1.14.0",
     "bcryptjs": "^3.0.3",
+    "bullmq": "^5.73.0",
+    "cheerio": "^1.2.0",
     "cloudinary": "^2.9.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
-    "dotenv": "^17.3.1",
+    "dotenv": "^17.4.0",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.3.1",
-    "express-validator": "^7.3.1",
+    "express-rate-limit": "^8.3.2",
+    "express-validator": "^7.3.2",
     "helmet": "^8.1.0",
     "ioredis": "^5.10.1",
+    "jsdom": "^29.0.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.3.3",
     "multer": "^2.1.1",
+    "node-fetch": "^3.3.2",
     "nodemailer": "^8.0.4",
-    "nodemon": "^3.1.14",
-    "redis": "^5.11.0"
+    "pdf-parse": "^2.4.5",
+    "puppeteer": "^24.40.0",
+    "redis": "^5.11.0",
+    "tesseract.js": "^7.0.0",
+    "youtube-transcript-plus": "^2.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }
