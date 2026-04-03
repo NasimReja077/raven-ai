@@ -5,7 +5,7 @@ import * as cheerio from "cheerio";
 import { Readability } from "@mozilla/readability";
 import { JSDOM } from "jsdom";
 import { YoutubeTranscript } from "youtube-transcript-plus";
-import pdfParse from "pdf-parse";
+import { PDFParse } from 'pdf-parse';
 import Tesseract from "tesseract.js";
 import fetch from "node-fetch";
 
