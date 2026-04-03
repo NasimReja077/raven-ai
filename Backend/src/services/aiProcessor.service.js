@@ -1,6 +1,4 @@
 // src/services/aiProcessor.service.js
-//
-
 // Pipeline:
 //   1. Summary + shortNote + keyPoints
 //   2. Topics + keywords + difficulty
@@ -70,33 +68,29 @@ export const processAIForSaveItem = async (itemId, opts = {} ) => {
       item.keywords = tkResult.keywords;
       item.difficulty = tkResult.difficulty;
     }
-
-    // ── Step 3: Follow-up questions
-    // ✅ Store in keyPoints extension (or add a `questions` field to model if desired)
-    // For now we log — add a `questions: [String]` field to SaveItem.model.js to persist
-    const questions = await generateQuestions({
-      title:   item.title,
-      summary: item.summary,
+    
+    // Step 3: Follow-up questions
+    // ✅ Only assign if schema has a questions field — avoids Mongoose strict-mode warnings
+    const questions = await generateQuestions({ 
+      title: item.title, 
+      summary: item.summary 
     });
-    // If you add a questions field: item.questions = questions;
-    // We attach it as a transient property so the worker can use it without a schema change
-    item.questions = questions;
+    if (item.schema && item.schema.path("questions")) {
+      item.questions = questions; // If you add a questions field: item.questions = questions;
+    }
 
-    // ── Step 4: AI Tags 
+    // Step 4: AI Tags — merge with existing user-added tags
     const { tagNames, tagIds } = await generateAITags(item);
 
     // Merge AI tag IDs with any user-added tag IDs already on the item
-    const existingTagIds = item.tags.map((t) => t.toString());
-    const newTagIds = tagIds.map((t) => t.toString());
-    const mergedTagIds   = [...new Set([...existingTagIds, ...newTagIds])];
-    item.tags = mergedTagIds;
-
-    console.log(`Generated ${tagNames.length} AI tags: ${tagNames.join(", ")}`);
+    const existing  = item.tags.map((t) => t.toString());
+    const incoming  = tagIds.map((t) => t.toString());
+    item.tags = [...new Set([...existing, ...incoming])];
+    console.log(`🏷️  AI tags: ${tagNames.join(", ")}`);
 
     // ── Step 5: Persist all AI fields 
     item.processingStatus = "completed";
     item.processedAt = new Date();
-
     await item.save();
     console.log(`✅ AI processing completed for item ${itemId}`);
 
@@ -107,11 +101,9 @@ export const processAIForSaveItem = async (itemId, opts = {} ) => {
         // AI success is already persisted; embedding can be retried via reEmbedItem()
       });
     }
-
     return item;
   } catch (error) {
     console.error(`❌ AI Processing failed for ${itemId}:`, error.message);
-
     // Mark failed in DB so the worker knows not to retry infinitely
     await SaveItem.updateOne(
       { _id: itemId },
@@ -122,7 +114,6 @@ export const processAIForSaveItem = async (itemId, opts = {} ) => {
         },
       }
     );
-
     throw error; // re-throw so BullMQ registers the job as failed + retries
   }
 };
@@ -175,7 +166,7 @@ export const reprocessFull = async (itemId) => {
         keyPoints: [],
         topics: [],
         keywords: [],
-        questions: [],
+        // questions: [],
         processingStatus: "pending",
         processingError:  null,
       },
