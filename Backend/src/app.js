@@ -8,7 +8,7 @@ import errorHandler from './middlewares/errorMiddleware.js';
 
 import authRoutes from './routes/auth.routes.js';
 import userRouter from './routes/user.routes.js';
-
+import savesRouter from './routes/saves.routes.js';
 
 const app = express();
 
@@ -36,6 +36,7 @@ app.use('/api', apiLimiter);
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRouter);
+app.use("/api/saves", savesRouter);
 
 // test route
 app.get("/", (req, res) => {
