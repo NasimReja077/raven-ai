@@ -2,8 +2,8 @@
 import Tag from "../models/Tag.models.js";
 import { SaveItem } from "../models/SaveItem.models.js";
 import ApiError from "../utils/ApiError.js";
-import { ApiResponse }  from "../utils/ApiResponse.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+import  ApiResponse  from "../utils/ApiResponse.js";
+import asyncHandler  from "../utils/asyncHandler.js";
 import { addReprocessJob } from "../jobs/save.queue.js";
 
 // POST /api/v1/tags
@@ -27,9 +27,7 @@ export const createTag = asyncHandler(async (req, res) => {
 export const getAllTags = asyncHandler(async (req, res) => {
   const { includeArchived = "false" } = req.query;
   
-  const filter = { 
-     user: req.user._id 
-     };
+  const filter = { user: req.user._id };
 
   if (includeArchived !== "true") filter.isArchived = false;
 
@@ -37,16 +35,11 @@ export const getAllTags = asyncHandler(async (req, res) => {
 
   // Attach live save count to each tag
   const tagsWithCount = await Promise.all(
-    tags.map(async (tag) => {
-      const saveCount = await SaveItem.countDocuments({
-        user: req.user._id,
-        tags: tag._id,
-        isArchived: false,
-      });
-      return { ...tag, saveCount };
-    })
+    tags.map(async (tag) => ({
+      ...tag,
+      saveCount: await SaveItem.countDocuments({ user: req.user._id, tags: tag._id, isArchived: false }),
+    }))
   );
-
   return res.status(200).json(new ApiResponse(200, tagsWithCount, "Tags fetched"));
 });
 
@@ -75,9 +68,8 @@ export const getTagById = asyncHandler(async (req, res) => {
 export const updateTag = asyncHandler(async (req, res) => {
   const { name, color } = req.body;
   const updates = {};
-  if (name)  updates.name  = name.trim().toLowerCase();
+  if (name) updates.name = name.trim().toLowerCase();
   if (color) updates.color = color;
-
   if (!Object.keys(updates).length) throw new ApiError(400, "No valid fields to update");
 
   const tag = await Tag.findOneAndUpdate(
@@ -86,7 +78,6 @@ export const updateTag = asyncHandler(async (req, res) => {
     { new: true, runValidators: true }
   );
   if (!tag) throw new ApiError(404, "Tag not found");
-
   return res.status(200).json(new ApiResponse(200, tag, "Tag updated"));
 });
 
@@ -101,8 +92,7 @@ export const deleteTag = asyncHandler(async (req, res) => {
     { user: req.user._id, tags: tag._id },
     { $pull: { tags: tag._id } }
   ).catch(() => {});
-
-  return res.status(200).json(new ApiResponse(200, {}, "Tag deleted"));
+  return res.status(200).json(new ApiResponse(200, null, "Tag deleted"));
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -139,9 +129,8 @@ export const addTagToSave = asyncHandler(async (req, res) => {
     { $addToSet: { tags: tagId } },
     { new: true }
   )
-    .populate("tags",        "name color")
-    .populate("collections", "name icon");
-
+    .populate("tags", "name color")
+    .populate("collections", "name icon")
   if (!save) throw new ApiError(404, "Save not found");
 
   // Increment tag usage count
@@ -165,7 +154,7 @@ export const removeTagFromSave = asyncHandler(async (req, res) => {
     { $pull: { tags: tagId } },
     { new: true }
   )
-    .populate("tags",        "name color")
+    .populate("tags", "name color")
     .populate("collections", "name icon");
 
   if (!save) throw new ApiError(404, "Save not found");
@@ -189,11 +178,8 @@ export const getSavesByTag = asyncHandler(async (req, res) => {
 
   const [saves, total] = await Promise.all([
     SaveItem.find({ user: req.user._id, tags: tag._id, isArchived: false })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit))
-      .populate("tags",        "name color")
-      .populate("collections", "name icon"),
+      .sort({ createdAt: -1 }).skip(skip).limit(Number(limit))
+      .populate("tags", "name color").populate("collections", "name icon"),
     SaveItem.countDocuments({ user: req.user._id, tags: tag._id, isArchived: false }),
   ]);
 
@@ -203,8 +189,8 @@ export const getSavesByTag = asyncHandler(async (req, res) => {
       saves,
       pagination: {
         total,
-        page:       Number(page),
-        limit:      Number(limit),
+        page: Number(page),
+        limit: Number(limit),
         totalPages: Math.ceil(total / Number(limit)),
       },
     }, "Saves by tag fetched")
