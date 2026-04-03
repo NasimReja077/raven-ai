@@ -4,6 +4,10 @@ import { generateEmbeddingsBatch, generateEmbedding } from "./ai.service.js";
 import { getPineconeIndex } from "../config/pinecone.config.js";
 import { SaveItem } from "../models/SaveItem.models.js";  
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Re-export embedText from ai.service so callers only need one import
+// ─────────────────────────────────────────────────────────────────────────────
+export { generateEmbedding as embedText };
 
 const splitter = new RecursiveCharacterTextSplitter({
   chunkSize:    800,
@@ -13,10 +17,6 @@ const splitter = new RecursiveCharacterTextSplitter({
 
 const PINECONE_BATCH_SIZE = 100;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Re-export embedText from ai.service so callers only need one import
-// ─────────────────────────────────────────────────────────────────────────────
-export { generateEmbedding as embedText };
 
 // export const  embedText = async (texts) => {
 //   if (!texts || texts.length === 0) return [];  const validTexts = texts
@@ -35,6 +35,8 @@ export { generateEmbedding as embedText };
 // } 
 // return results;
 
+
+
 // Chunk text
 export const chunkText = async (text) => {
   if (!text || text.trim().length === 0) return [];
@@ -43,6 +45,7 @@ export const chunkText = async (text) => {
 };
 
 // Process SaveItem → Chunk → Embed → Upsert to Pinecone
+// ─── Full pipeline: SaveItem → Chunk → Embed → Pinecone
 /**
  * processAndStoreEmbedding(itemId)
  *
@@ -59,25 +62,40 @@ export const processAndStoreEmbedding = async (itemId) => {
   if (!item) throw new Error(`SaveItem not found: ${itemId}`);
 
   // Build rich text
+  // let fullText = [item.title, item.description, item.summary, item.shortNote, item.userNote]
+  // .filter(Boolean)
+  // .join("\n\n");
+ 
+  // if (item.headings?.length > 0) fullText += "\n\nHeadings:\n" + item.headings.map((h) => `H${h.level}: ${h.text}`).join("\n");
+
+  // if (item.highlights?.length > 0) fullText += "\n\nHighlights:\n" + item.highlights.map((h) => h.text).join("\n");
+
+  // if (item.keyPoints?.length > 0) fullText += "\n\nKey Points:\n" + item.keyPoints.join("\n");
+ 
+  // Build rich text blob
   let fullText = [item.title, item.description, item.summary, item.shortNote, item.userNote]
     .filter(Boolean)
     .join("\n\n");
-
-  if (item.headings?.length > 0) {
-    fullText += "\n\nHeadings:\n" + item.headings.map((h) => `H${h.level}: ${h.text}`).join("\n");
-  }
-  if (item.highlights?.length > 0) {
+ 
+  if (item.highlights?.length > 0)
     fullText += "\n\nHighlights:\n" + item.highlights.map((h) => h.text).join("\n");
-  }
-  if (item.keyPoints?.length > 0) {
+ 
+  if (item.keyPoints?.length > 0)
     fullText += "\n\nKey Points:\n" + item.keyPoints.join("\n");
-  }
 
-  if (!fullText.trim()) {
-    console.warn(`⚠️ No embeddable text for item: ${itemId}`);
-    await SaveItem.updateOne({ _id: itemId }, {
-      $set: { hasEmbedding: false, processingStatus: "failed", processingError: "No embeddable text" },
-    });
+
+   if (!fullText.trim()) {
+    await SaveItem.updateOne(
+      { _id: itemId },
+      {
+        $set: {
+          hasEmbedding: false,
+          processingStatus: "failed",
+          processingError: "No embeddable text",
+        },
+      }
+    );
+
     return [];
   }
 
@@ -88,7 +106,7 @@ export const processAndStoreEmbedding = async (itemId) => {
     return [];
   }
 
-  // Batch embed via ai.service
+  // Batch embed
   const embeddings = await generateEmbeddingsBatch(chunks);
 
   // Build Pinecone vectors
@@ -96,20 +114,18 @@ export const processAndStoreEmbedding = async (itemId) => {
   const vectorIds = [];
 
   for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i];
-
-    if (!embeddings[i] || chunk.length < 40) continue;
-
+    if (!embeddings[i] || chunks[i].length < 40) continue;
     const vectorId = `${item.user.toString()}_${item._id.toString()}_${i}`;
 
     vectors.push({
-      id:     vectorId,
+      id: vectorId,
       values: embeddings[i],
       metadata: {
         userId: item.user.toString(),
         itemId: item._id.toString(),
         chunkIndex: i,
-        text: chunk.slice(0, 500),
+        // BUG FIX: was `chunks.slice(0, 500)` (entire array) — should be `chunks[i].slice(0, 500)`
+        text: chunks[i].slice(0, 500),
         type: item.type || "link",
         title: (item.title || "Untitled").slice(0, 150),
         platform: item.sourceMeta?.platform || "website",
@@ -135,15 +151,16 @@ export const processAndStoreEmbedding = async (itemId) => {
 
   // Update MongoDB
 
-  await SaveItem.updateOne({ _id: itemId }, {
-    $set: {
-      embeddingId:      vectorIds[0]           || null,
-      hasEmbedding:     vectorIds.length > 0,
-      embeddingVersion: (item.embeddingVersion || 0) + 1,
-      processedAt:      new Date(),
+  await SaveItem.updateOne(
+    { _id: itemId }, 
+    {
+      $set: {
+        embeddingId: vectorIds[0] || null,
+        hasEmbedding: vectorIds.length > 0,
+        embeddingVersion: (item.embeddingVersion || 0) + 1,
+        processedAt: new Date(),
     },
   });
-
   return vectorIds;
 };
 
@@ -154,7 +171,13 @@ export const deleteEmbeddings = async (itemId, userId) => {
   try {
     const pineconeIndex = await getPineconeIndex();
     await pineconeIndex.deleteMany({
-      filter: { itemId: { $eq: itemId.toString() }, userId: { $eq: userId.toString() } },
+      filter: { itemId: { 
+        $eq: itemId.toString() 
+        }, 
+        userId: { 
+          $eq: userId.toString() 
+        }
+      },
     });
     console.log(`🗑️ Deleted embeddings for item ${itemId}`);
   } catch {
@@ -174,8 +197,13 @@ export const reEmbedItem = async (itemId) => {
   const item = await SaveItem.findById(itemId);
   if (!item) throw new Error(`Item not found: ${itemId}`);
 
-  await SaveItem.updateOne({ _id: itemId }, {
-    $set: { processingStatus: "processing", hasEmbedding: false },
+  await SaveItem.updateOne(
+    { _id: itemId }, 
+    {
+      $set: { 
+        processingStatus: "processing", 
+        hasEmbedding: false 
+    },
   });
 
   await deleteEmbeddings(itemId, item.user.toString());
