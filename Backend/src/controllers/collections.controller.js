@@ -6,6 +6,7 @@ import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 // POST /api/v1/collections
+// Create Collection
 
 export const createCollection = asyncHandler(async (req, res) => {
   const { name, description, icon, isPublic } = req.body;
@@ -19,12 +20,13 @@ export const createCollection = asyncHandler(async (req, res) => {
     icon: icon || "GoFileDirectoryFill",
     isPublic: Boolean(isPublic),
   });
-  return res.status(201).json(new ApiResponse(201, collection, "Collection created"));
+  return res
+    .status(201)
+    .json(new ApiResponse(201, collection, "Collection created"));
 });
 
-
 // GET /api/v1/collections
-
+// Get All Collections
 export const getAllCollections = asyncHandler(async (req, res) => {
   const { includeArchived = "false" } = req.query;
 
@@ -39,19 +41,20 @@ export const getAllCollections = asyncHandler(async (req, res) => {
   const enriched = await Promise.all(
     collections.map(async (col) => ({
       ...col,
-      itemCount: await SaveItem.countDocuments({ 
-        user: req.user._id, 
-        collections: col._id, 
-        isArchived: false 
+      itemCount: await SaveItem.countDocuments({
+        user: req.user._id,
+        collections: col._id,
+        isArchived: false,
       }),
-    }))
+    })),
   );
-  return res.status(200).json(new ApiResponse(200, enriched, "Collections fetched"));
+  return res
+    .status(200)
+    .json(new ApiResponse(200, enriched, "Collections fetched"));
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
 // GET /api/v1/collections/:id
-// ─────────────────────────────────────────────────────────────────────────────
+
 export const getCollectionById = asyncHandler(async (req, res) => {
   const collection = await Collection.findOne({
     _id: req.params.id,
@@ -60,21 +63,28 @@ export const getCollectionById = asyncHandler(async (req, res) => {
 
   if (!collection) throw new ApiError(404, "Collection not found");
 
-  // BUG FIX: was using undefined `liveCount` — renamed to `itemCount`
   const itemCount = await SaveItem.countDocuments({
     user: req.user._id,
     collections: collection._id,
     isArchived: false,
   });
- 
+
   return res
     .status(200)
-    .json(new ApiResponse(200, { ...collection, itemCount }, "Collection fetched"));
+    .json(
+      new ApiResponse(200, 
+        { 
+          ...collection, 
+          itemCount 
+        }, 
+        "Collection fetched"
+      ),
+    );
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 // PATCH /api/v1/collections/:id
-// ─────────────────────────────────────────────────────────────────────────────
+
 export const updateCollection = asyncHandler(async (req, res) => {
   const ALLOWED = ["name", "description", "icon", "isPublic", "isArchived"];
 
@@ -83,7 +93,8 @@ export const updateCollection = asyncHandler(async (req, res) => {
     if (req.body[field] !== undefined) updates[field] = req.body[field];
   });
 
-  if (!Object.keys(updates).length) throw new ApiError(400, "No valid fields to update");
+  if (!Object.keys(updates).length)
+    throw new ApiError(400, "No valid fields to update");
 
   updates.lastUpdated = new Date();
   if (updates.name) updates.name = updates.name.trim();
@@ -91,20 +102,25 @@ export const updateCollection = asyncHandler(async (req, res) => {
   const collection = await Collection.findOneAndUpdate(
     { _id: req.params.id, user: req.user._id },
     { $set: updates },
-    { new: true, runValidators: true }
+    { 
+      new: true, 
+      runValidators: true 
+    },
   );
 
   if (!collection) throw new ApiError(404, "Collection not found");
 
-  return res.status(200).json(new ApiResponse(200, collection, "Collection updated"));
+  return res
+    .status(200)
+    .json(new ApiResponse(200, collection, "Collection updated"));
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 // DELETE /api/v1/collections/:id
-// ─────────────────────────────────────────────────────────────────────────────
+
 export const deleteCollection = asyncHandler(async (req, res) => {
   const collection = await Collection.findOneAndDelete({
-    _id:  req.params.id,
+    _id: req.params.id,
     user: req.user._id,
   });
   if (!collection) throw new ApiError(404, "Collection not found");
@@ -112,15 +128,19 @@ export const deleteCollection = asyncHandler(async (req, res) => {
   // Remove reference from all saves (fire-and-forget)
   SaveItem.updateMany(
     { user: req.user._id, collections: collection._id },
-    { $pull: { collections: collection._id } }
+    { $pull: 
+      { 
+        collections: collection._id 
+      } 
+    },
   ).catch(() => {});
 
   return res.status(200).json(new ApiResponse(200, null, "Collection deleted"));
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 // GET /api/v1/collections/:id/saves
-// ─────────────────────────────────────────────────────────────────────────────
+
 export const getCollectionSaves = asyncHandler(async (req, res) => {
   const { page = 1, limit = 20, sort = "-createdAt" } = req.query;
 
@@ -135,37 +155,43 @@ export const getCollectionSaves = asyncHandler(async (req, res) => {
   const [saves, total] = await Promise.all([
     SaveItem.find({
       user: req.user._id,
-      collections: collection._id,
-      isArchived:  false,
+      collections: { $in: [collection._id] },
+      isArchived: false,
     })
-      .sort(sort)
+      .sort({ createAt: -1 })
       .skip(skip)
       .limit(Number(limit))
-      .populate("tags", "name color"),
+      .populate("tags", "name color")
+      .populate("collections", "name icon"),
     SaveItem.countDocuments({
       user: req.user._id,
-      collections: collection._id,
-      isArchived:  false,
+      collections: { $in: [collection._id] },
+      isArchived: false,
     }),
   ]);
 
   return res.status(200).json(
-    new ApiResponse(200, {
-      collection,
-      saves,
-      pagination: {
-        total,
-        page: Number(page),
-        limit: Number(limit),
-        totalPages: Math.ceil(total / Number(limit)),
-        hasMore: skip + saves.length < total,
+    new ApiResponse(
+      200,
+      {
+        collection,
+        saves,
+        pagination: {
+          total,
+          page: Number(page),
+          limit: Number(limit),
+          totalPages: Math.ceil(total / Number(limit)),
+          hasMore: skip + saves.length < total,
+        },
       },
-    }, "Collection saves fetched"));
+      "Collection saves fetched",
+    ),
+  );
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /api/v1/collections/:id/saves   → add a save to this collection
-// ─────────────────────────────────────────────────────────────────────────────
+
+// POST /api/v1/collections/:id/saves  - add a save to this collection
+
 export const addSaveToCollection = asyncHandler(async (req, res) => {
   const { saveId } = req.body;
   if (!saveId) throw new ApiError(400, "saveId is required");
@@ -179,10 +205,10 @@ export const addSaveToCollection = asyncHandler(async (req, res) => {
   const save = await SaveItem.findOneAndUpdate(
     { _id: saveId, user: req.user._id },
     { $addToSet: { collections: collection._id } },
-    { new: true }
+    { new: true },
   )
-  .populate("tags", "name color")
-  .populate("collections", "name icon");
+    .populate("tags", "name color")
+    .populate("collections", "name icon");
 
   if (!save) throw new ApiError(404, "Save not found");
 
@@ -191,12 +217,14 @@ export const addSaveToCollection = asyncHandler(async (req, res) => {
     $inc: { itemCount: 1 },
     lastUpdated: new Date(),
   }).catch(() => {});
-  return res.status(200).json(new ApiResponse(200, save, "Save added to collection"));
+  return res
+    .status(200)
+    .json(new ApiResponse(200, save, "Save added to collection"));
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DELETE /api/v1/collections/:id/saves/:saveId   → remove save from collection
-// ─────────────────────────────────────────────────────────────────────────────
+
+// DELETE /api/v1/collections/:id/saves/:saveId - remove save from collection
+
 export const removeSaveFromCollection = asyncHandler(async (req, res) => {
   // const { saveId } = req.params;
 
@@ -209,33 +237,82 @@ export const removeSaveFromCollection = asyncHandler(async (req, res) => {
   const save = await SaveItem.findOneAndUpdate(
     { _id: req.params.saveId, user: req.user._id },
     { $pull: { collections: collection._id } },
-    { new: true }
+    { new: true },
   )
-  .populate("tags", "name color")
-  .populate("collections", "name icon");
+    .populate("tags", "name color")
+    .populate("collections", "name icon");
 
   if (!save) throw new ApiError(404, "Save not found");
 
   await Collection.findByIdAndUpdate(collection._id, {
     $inc: { itemCount: -1 },
   }).catch(() => {});
-  return res.status(200).json(new ApiResponse(200, save, "Save removed from collection"));
+  return res
+    .status(200)
+    .json(new ApiResponse(200, save, "Save removed from collection"));
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PATCH /api/v1/collections/:id/reorder   → reorder saves within a collection
-// Body: { saveIds: ["id1", "id2", ...] }  (full ordered array)
-// ─────────────────────────────────────────────────────────────────────────────
+
+// PATCH /api/v1/collections/:id/reorder - reorder saves within a collection
+
 export const reorderCollectionSaves = asyncHandler(async (req, res) => {
-  // Reordering is client-side; we just validate the collection belongs to the user
+  const { saveIds } = req.body; // Expect array of save _ids in new order
+
+  if (!Array.isArray(saveIds) || saveIds.length === 0) {
+    throw new ApiError(400, "saveIds array is required");
+  }
+
   const collection = await Collection.findOne({
-    _id:  req.params.id,
+    _id: req.params.id,
     user: req.user._id,
   });
+
   if (!collection) throw new ApiError(404, "Collection not found");
 
-  // Update lastUpdated to push it to the top of the list
-  await Collection.findByIdAndUpdate(collection._id, { lastUpdated: new Date() });
+  // Optional: Validate that all saveIds belong to this collection and user
+  const validSaves = await SaveItem.find({
+    _id: { $in: saveIds },
+    user: req.user._id,
+    collections: collection._id,
+  }).select("_id");
 
-  return res.status(200).json(new ApiResponse(200, null, "Order saved"));
+  if (validSaves.length !== saveIds.length) {
+    throw new ApiError(
+      400,
+      "Some saveIds are invalid or do not belong to this collection",
+    );
+  }
+
+  // Update lastUpdated so it appears at the top in "Get All Collections"
+  await Collection.findByIdAndUpdate(collection._id, {
+    lastUpdated: new Date(),
+  });
+
+  // Return the saves in the new order (client can re-render)
+  const orderedSaves = await SaveItem.find({
+    _id: { $in: saveIds },
+    user: req.user._id,
+  })
+    .populate("tags", "name color")
+    .populate("collections", "name icon")
+    .lean();
+
+  // Sort them according to the order sent by frontend
+  const saveMap = new Map(
+    orderedSaves.map((save) => [save._id.toString(), save]),
+  );
+  const sortedSaves = saveIds
+    .map((id) => saveMap.get(id.toString()))
+    .filter(Boolean);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        message: "Order saved successfully",
+        saves: sortedSaves,
+      },
+      "Collection saves reordered",
+    ),
+  );
 });
