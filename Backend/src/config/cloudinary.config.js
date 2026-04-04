@@ -12,7 +12,8 @@ cloudinary.config({
 });
 
 export const CLOUDINARY_FOLDERS = {
-  AVATARS: 'raven_ai/users/avatars'
+  AVATARS: 'raven_ai/users/avatars',
+  SAVE_FILES: 'raven_ai/saves/files'
 };
 
 export default cloudinary;
