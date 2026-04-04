@@ -12,7 +12,7 @@ const splitter = new RecursiveCharacterTextSplitter({
   separators: ["\n\n", "\n", ". ", "! ", "? ", " ", ""],
 });
 
-// const PINECONE_BATCH_SIZE = 100;
+const PINECONE_BATCH_SIZE = 100;
 
 // export const  embedText = async (texts) => {
 //   if (!texts || texts.length === 0) return [];  const validTexts = texts
@@ -30,19 +30,19 @@ const splitter = new RecursiveCharacterTextSplitter({
 //   results.push(...response.data.map((item) => item.embedding));
 // } 
 // return results;
+
+
 // Chunk text
 export const chunkText = async (text) => {
   if (!text || !text.trim()) return [];
-  return (
-    await splitter
-    .splitText(text.trim())
-  )
+  const chunks = await splitter.splitText(text.trim());
+  return chunks
   .map((c) => c.trim())
   .filter((c) => c.length > 20);
 };
 
-// Process SaveItem → Chunk → Embed → Upsert to Pinecone
-// ─── Full pipeline: SaveItem → Chunk → Embed → Pinecone
+// processAndStoreEmbedding(itemId)
+// Full pipeline: SaveItem → chunk → embed → Pinecone upsert → MongoDB update
 /**
  * processAndStoreEmbedding(itemId)
  *
@@ -59,7 +59,7 @@ export const processAndStoreEmbedding = async (itemId) => {
   const item = await SaveItem.findById(itemId).lean();
   if (!item) throw new Error(`SaveItem not found: ${itemId}`);
 
-  // Build rich text blob
+  // Build rich text blob from all text fields
 
   let fullText = [
     item.title,
@@ -68,33 +68,44 @@ export const processAndStoreEmbedding = async (itemId) => {
     item.shortNote,
     item.userNote,
   ]
-    .filter(Boolean)
-    .join("\n\n");
+  .filter(Boolean)
+  .join("\n\n");
+
   if (item.highlights?.length > 0)
-    fullText +=
-      "\n\nHighlights:\n" + item.highlights.map((h) => h.text).join("\n");
+    fullText += "\n\nHighlights:\n" + item.highlights.map((h) => h.text).join("\n");
+ 
   if (item.keyPoints?.length > 0)
     fullText += "\n\nKey Points:\n" + item.keyPoints.join("\n");
 
   if (!fullText.trim()) {
+    console.warn(`⚠️ No embeddable text for item ${itemId}`);
     await SaveItem.updateOne(
       { _id: itemId },
       {
         $set: {
-          hasEmbedding: false,
+          hasEmbedding:   false,
           processingStatus: "failed",
           processingError: "No embeddable text",
         },
-      },
+      }
     );
     return [];
   }
 
   // Chunk
   const chunks = await chunkText(fullText);
-  if (!chunks.length === 0) return [];
 
-  // Batch embed
+  // if (!chunks.length === 0) return [];
+  // ✅ FIX: was `!chunks.length === 0` which is ALWAYS false (boolean !== 0)
+  //    Correct check: `chunks.length === 0`
+  if (chunks.length === 0) {
+    console.warn(`⚠️ Text splitter produced 0 chunks for item ${itemId}`);
+    return [];
+  }
+
+  console.log(` ${chunks.length} chunks for item ${itemId}`);
+
+  // Batch embed via Mistral
   const embeddings = await generateEmbeddingsBatch(chunks);
 
   // Build Pinecone vectors
@@ -103,7 +114,9 @@ export const processAndStoreEmbedding = async (itemId) => {
 
   for (let i = 0; i < chunks.length; i++) {
     if (!embeddings[i] || chunks[i].length < 40) continue;
-    const vectorId = `${item.user}_${item._id}_${i}`;
+
+    const vectorId = `${item.user.toString()}_${item._id.toString()}_${i}`;
+
     vectors.push({
       id: vectorId,
       values: embeddings[i],
@@ -113,7 +126,7 @@ export const processAndStoreEmbedding = async (itemId) => {
         chunkIndex: i,
         text: chunks[i].slice(0, 500),
         type: item.type || "link",
-        title: (item.title || "").slice(0, 150),
+        title: (item.title || "Untitled").slice(0, 150),
         platform: item.sourceMeta?.platform || "website",
         createdAt: item.createdAt?.toISOString() || new Date().toISOString(),
         clusterId: item.clusterId || "",
@@ -125,14 +138,34 @@ export const processAndStoreEmbedding = async (itemId) => {
     vectorIds.push(vectorId);
   }
 
+
+  if (vectors.length === 0) {
+    console.warn(`No valid vectors built for item ${itemId}`);
+    return [];
+  }
+
+  // Upsert to Pinecone in batches
+  const pineconeIndex = await getPineconeIndex();
+ 
+  let upsertedCount = 0;
+  for (let i = 0; i < vectors.length; i += PINECONE_BATCH_SIZE) {
+    const batch = vectors.slice(i, i + PINECONE_BATCH_SIZE);
+    await pineconeIndex.upsert(batch);
+    upsertedCount += batch.length;
+    console.log(`Pinecone upsert: ${upsertedCount}/${vectors.length} vectors for item ${itemId}`);
+  }
+
+
   // Upsert to Pinecone (batched)
 
-  if (vectors.length > 0) {
-    const index = await getPineconeIndex();
-    for (let i = 0; i < vectors.length; i += 100)
-      await index.upsert(vectors.slice(i, i + 100));
-    console.log(`✅ Stored ${vectors.length} vectors for ${itemId}`);
-  }
+  // if (vectors.length > 0) {
+  //   const index = await getPineconeIndex();
+  //   for (let i = 0; i < vectors.length; i += 100)
+  //     await index.upsert(vectors.slice(i, i + 100));
+  //   console.log(`✅ Stored ${vectors.length} vectors for ${itemId}`);
+  // }
+
+
 // Update MongoDB
 
   await SaveItem.updateOne(
@@ -146,8 +179,12 @@ export const processAndStoreEmbedding = async (itemId) => {
       },
     },
   );
+
+  console.log(`✅ Stored ${vectors.length} Pinecone vectors for item ${itemId}`);
   return vectorIds;
 };
+
+
 // Delete embeddings
 
 export const deleteEmbeddings = async (itemId, userId) => {
@@ -160,13 +197,17 @@ export const deleteEmbeddings = async (itemId, userId) => {
         userId: { $eq: userId.toString() },
       },
     });
+    console.log(`Deleted Pinecone vectors for item ${itemId}`);
   } catch {
-    // Free plan fallback: ID-based delete
+    // Fallback for free/starter plans that don't support filter-delete
     try {
       const index = await getPineconeIndex();
-      await index.deleteMany(
-        Array.from({ length: 200 }, (_, i) => `${userId}_${itemId}_${i}`),
+      // Try deleting by guessed IDs (up to 200 chunks per item)
+      const ids = Array.from(
+        { length: 200 },
+        (_, i) => `${userId}_${itemId}_${i}`
       );
+      await index.deleteMany(ids);
     } catch (err) {
       console.error(`Fallback delete failed for ${itemId}:`, err.message);
     }
@@ -177,12 +218,13 @@ export const deleteEmbeddings = async (itemId, userId) => {
 export const reEmbedItem = async (itemId) => {
   const item = await SaveItem.findById(itemId);
   if (!item) throw new Error(`Item not found: ${itemId}`);
+
   await SaveItem.updateOne(
     { _id: itemId },
     { 
-      $set: { 
-        processingStatus: "processing",
-         hasEmbedding: false 
+      $set: {
+          processingStatus: "processing",
+          hasEmbedding: false 
         } 
     },
   );
