@@ -4,7 +4,7 @@ import * as cheerio from "cheerio";
 import { Readability } from "@mozilla/readability";
 import { JSDOM } from "jsdom";
 import { YoutubeTranscript } from "youtube-transcript-plus";
-import { PDFParse } from "pdf-parse";
+// import PDFParse from "pdf-parse"; 
 import Tesseract from "tesseract.js";
 // Detect content type from URL and return one of: 'link', 'article', 'tweet', 'youtube', 'github', 'image', 'pdf'
 
@@ -49,6 +49,32 @@ export const detectPlatform = (url = "") => {
   return "website";
 };
 
+
+// ─── Safe hostname extraction 
+const safeHostname = (url) => {
+  try { 
+    return new URL(url).hostname; 
+  } catch { 
+    return ""; 
+  }
+};
+ 
+// ─── Graceful fallback 
+const buildFallback = (url, platform, type) => ({
+  title: url,
+  description: "",
+  content: `Saved from: ${url}`,
+  thumbnail: "",
+  siteName: "",
+  favicon: `https://www.google.com/s2/favicons?domain=${safeHostname(url)}&sz=64`,
+  author: "",
+  wordCount: 0,
+  headings: [],
+  platform,
+  type,
+});
+ 
+
 // Main scraper
 export const scrapeContent = async (url) => {
   const type = detectContentType(url);
@@ -65,12 +91,9 @@ export const scrapeContent = async (url) => {
       const res = await axios.get(url, {
         timeout: 12000,
         headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-          Accept:
-            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
           "Accept-Language": "en-US,en;q=0.5",
-          Connection: "keep-alive",
         },
         maxRedirects: 5,
       });
@@ -79,9 +102,7 @@ export const scrapeContent = async (url) => {
       console.warn(
         `Axios failed for ${url}: ${axiosErr.message} — trying Puppeteer`,
       );
-      // ✅ FIX: Puppeteer wrapped in its own try/catch.
-      //    Previously a Puppeteer crash would bubble up and kill the entire Node process via nodemon.
-      //    Now we catch it and fall back gracefully.
+    
       try {
         html = await scrapeWithPuppeteer(url);
       } catch (puppeteerErr) {
@@ -100,29 +121,6 @@ export const scrapeContent = async (url) => {
   }
 };
 
-// Graceful fallback
-const buildFallback = (url, platform, type) => ({
-  title: url,
-  description: "",
-  content: `Saved from: ${url}`,
-  thumbnail: "",
-  siteName: "",
-  favicon: `https://www.google.com/s2/favicons?domain=${safeHostname(url)}&sz=64`,
-  author: "",
-  wordCount: 0,
-  headings: [],
-  platform,
-  type,
-});
-
-const safeHostname = (url) => {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return "";
-  }
-};
-
 // CONTENT CLEANING + READABILITY + HEADINGS extraction 
 const extractReadable = async (html, url, platform) => {
   const $ = cheerio.load(html);
@@ -131,7 +129,7 @@ const extractReadable = async (html, url, platform) => {
   ).remove();
   // Extract Headings (H1-H6) with hierarchy for AI
   const headings = [];
-  $("h1,h2,h3,h4,h5,h6").each((i, el) => {
+  $("h1,h2,h3,h4,h5,h6").each((_, el) => {
     const text = $(el).text().trim().replace(/\s+/g, " ");
     if (text.length > 3)
       headings.push({ level: parseInt(el.tagName[1]), text });
@@ -181,8 +179,6 @@ const extractReadable = async (html, url, platform) => {
 
 // Puppeteer (fallback for JS-heavy sites) - Used as a fallback for dynamic sites or when axios fails, with optimizations for speed and resource blocking.
 
-// ✅ This function THROWS on error — the caller (scrapeContent) catches it safely.
-//    Puppeteer is lazy-imported so it doesn't crash the process if unavailable.
 export const scrapeWithPuppeteer = async (url) => {
   const puppeteer = (await import("puppeteer")).default;
 
@@ -204,9 +200,11 @@ export const scrapeWithPuppeteer = async (url) => {
 
   try {
     const page = await browser.newPage();
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-    );
+    // await page.setUserAgent(
+    //   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+    // );
+    // await page.setRequestInterception(true);
+    await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
     await page.setRequestInterception(true);
     page.on("request", (req) => {
       ["image", "stylesheet", "font", "media"].includes(req.resourceType())
@@ -253,8 +251,7 @@ export const scrapeYoutube = async (url) => {
   return {
     title: title || "YouTube Video",
     description,
-    thumbnail:
-      thumbnail || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+    thumbnail: thumbnail || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
     content: transcript,
     siteName: "YouTube",
     favicon: "https://www.youtube.com/favicon.ico",
@@ -270,27 +267,46 @@ export const scrapeYoutube = async (url) => {
 // PDF
 export const scrapePDF = async (urlOrBuffer) => {
   let buffer;
-  if (typeof urlOrBuffer === "string") {
-    const res = await axios.get(urlOrBuffer, {
-      responseType: "arraybuffer",
-      timeout: 20000,
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; RavenBot/1.0)" },
-    });
-    buffer = Buffer.from(res.data);
-  } else {
-    buffer = urlOrBuffer;
+
+  try {
+    if (typeof urlOrBuffer === "string") {
+      const res = await axios.get(urlOrBuffer, {
+        responseType: "arraybuffer",
+        timeout: 20000,
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; RavenBot/1.0)" },
+      });
+      buffer = Buffer.from(res.data);
+    } else {
+      buffer = urlOrBuffer;
+    }
+
+    // ✅ Correct way for pdf-parse in ESM (use .default)
+    const pdfParse = (await import("pdf-parse")).default;
+    const data = await pdfParse(buffer);
+
+    return {
+      title: "PDF Document",
+      description: "",
+      content: data.text.trim().slice(0, 60000),
+      wordCount: data.text.split(/\s+/).length,
+      pages: data.numpages || 1,
+      headings: [],
+      platform: "pdf",
+      type: "pdf",
+    };
+  } catch (error) {
+    console.error("PDF parsing failed:", error.message);
+    return {
+      title: "PDF Document",
+      description: "",
+      content: "Could not extract text from PDF.",
+      wordCount: 0,
+      pages: 1,
+      headings: [],
+      platform: "pdf",
+      type: "pdf",
+    };
   }
-  const data = await PDFParse(buffer);
-  return {
-    title: "PDF Document",
-    description: "",
-    content: data.text.trim().slice(0, 60000),
-    wordCount: data.text.split(/\s+/).length,
-    pages: data.numpages,
-    headings: [],
-    platform: "pdf",
-    type: "pdf",
-  };
 };
 
 // Image OCR
@@ -319,18 +335,16 @@ export const scrapeImage = async (urlOrBuffer) => {
 
 // YouTube ID extraction 
 const extractYouTubeId = (url) => {
-  const match = url.match(
-    /(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([a-zA-Z0-9_-]{11})/,
-  );
+  const match = url.match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([a-zA-Z0-9_-]{11})/);
   return match ? match[1] : null;
 };
 
-export default {
-  scrapeContent,
-  detectContentType,
-  detectPlatform,
-  scrapeWithPuppeteer,
-  scrapeYoutube,
-  scrapePDF,
-  scrapeImage,
+export default { 
+  scrapeContent, 
+  detectContentType, 
+  detectPlatform, 
+  scrapeWithPuppeteer, 
+  scrapeYoutube, 
+  scrapePDF, 
+  scrapeImage 
 };
