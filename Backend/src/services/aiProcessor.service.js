@@ -1,4 +1,5 @@
 // src/services/aiProcessor.service.js
+
 // Pipeline:
 //   1. Summary + shortNote + keyPoints
 //   2. Topics + keywords + difficulty
@@ -6,157 +7,127 @@
 //   4. AI tag generation + MongoDB upsert
 //   5. Save all AI fields to SaveItem
 //   6. Trigger embedding pipeline (non-blocking)
-
 import { SaveItem } from "../models/SaveItem.models.js";
 import {
   generateSummary,
   generateTopicsAndKeywords,
   generateQuestions,
-//   generateFlashcards,
 } from "./ai.service.js";
-
 import { generateAITags } from "./aiTag.service.js";
-import { processAndStoreEmbedding }from "./embedding.service.js";
-
-
+import { processAndStoreEmbedding } from "./embedding.service.js";
 // Main pipeline
 
-/**
- * processAIForSaveItem(itemId)
- *
- * Runs the full AI enrichment pipeline for one SaveItem.
- * Safe to call from BullMQ worker — catches errors, updates processingStatus.
- *
- * @param   {string}  itemId  MongoDB ObjectId string
- * @returns {object}  The updated SaveItem document
- */
-
-
-export const processAIForSaveItem = async (itemId, opts = {} ) => {
+export const processAIForSaveItem = async (itemId, opts = {}) => {
   const item = await SaveItem.findById(itemId);
   if (!item) throw new Error(`SaveItem not found: ${itemId}`);
-
-  console.log(`Starting AI processing for item: ${itemId}`);
+  console.log(`🤖 Starting AI processing for item: ${itemId}`);
 
   try {
-    // Build the text context we'll pass to all AI calls
+    // Build the text context pass to all AI calls
     const context = {
       title: item.title || "",
       description: item.description || "",
       content: item.description || "", // content field from scraper stored in description
-      summary: item.summary  || "",
+      summary: item.summary || "",
       type: item.type || "link",
     };
-
-    // ── Step 1: Summary + shortNote + keyPoints
+    
+    // Step 1: Summary + shortNote + keyPoints
     // Only generate if not already present (allows partial re-processing)
 
     if (!item.summary || item.summary.length < 30) {
-      const summaryResult = await generateSummary(context);
-      item.summary   = summaryResult.summary;
-      item.shortNote = summaryResult.shortNote;
-      item.keyPoints = summaryResult.keyPoints;
-
+      const r = await generateSummary(context); // r =summaryResult
+      item.summary = r.summary;
+      item.shortNote = r.shortNote;
+      item.keyPoints = r.keyPoints;
       // Update context with fresh summary for downstream steps
       context.summary = item.summary;
     }
 
-    // ── Step 2: Topics + keywords + difficulty 
+    // Step 2: Topics + keywords + difficulty 
+
     if (!item.topics || item.topics.length === 0) {
-      const tkResult = await generateTopicsAndKeywords(context);
-      item.topics = tkResult.topics;
-      item.keywords = tkResult.keywords;
-      item.difficulty = tkResult.difficulty;
+      const tk = await generateTopicsAndKeywords(context);
+      item.topics = tk.topics;
+      item.keywords = tk.keywords;
+      item.difficulty = tk.difficulty;
     }
-    
+
     // Step 3: Follow-up questions
-    // ✅ Only assign if schema has a questions field — avoids Mongoose strict-mode warnings
-    const questions = await generateQuestions({ 
-      title: item.title, 
-      summary: item.summary 
+    const questions = await generateQuestions({
+      title: item.title,
+      summary: item.summary,
     });
-    if (item.schema && item.schema.path("questions")) {
-      item.questions = questions; // If you add a questions field: item.questions = questions;
-    }
+    if (item.schema?.path("questions")) item.questions = questions;
 
     // Step 4: AI Tags — merge with existing user-added tags
     const { tagNames, tagIds } = await generateAITags(item);
-
-    // Merge AI tag IDs with any user-added tag IDs already on the item
-    const existing  = item.tags.map((t) => t.toString());
-    const incoming  = tagIds.map((t) => t.toString());
-    item.tags = [...new Set([...existing, ...incoming])];
+    item.tags = [
+      ...new Set([
+        ...item.tags.map((t) => t.toString()),
+        ...tagIds.map((t) => t.toString()),
+      ]),
+    ];
     console.log(`🏷️  AI tags: ${tagNames.join(", ")}`);
 
-    // ── Step 5: Persist all AI fields 
+    // Step 5: Persist all AI fields
+
     item.processingStatus = "completed";
     item.processedAt = new Date();
     await item.save();
-    console.log(`✅ AI processing completed for item ${itemId}`);
+    console.log(`✅ AI processing done for item ${itemId}`);
 
-    // ── Step 6: Trigger embedding (non-blocking, has its own error handling) ─
+    // Step 6: Trigger embedding (non-blocking, has its own error handling)
     if (!opts.skipEmbedding) {
-      processAndStoreEmbedding(itemId).catch((err) => {
-        console.error(`⚠️  Embedding failed for ${itemId}:`, err.message);
-        // AI success is already persisted; embedding can be retried via reEmbedItem()
-      });
+      processAndStoreEmbedding(itemId).catch((err) =>
+        console.error(`⚠️ Embedding failed for ${itemId}:`, err.message),
+      );
     }
     return item;
   } catch (error) {
     console.error(`❌ AI Processing failed for ${itemId}:`, error.message);
+
     // Mark failed in DB so the worker knows not to retry infinitely
+
     await SaveItem.updateOne(
       { _id: itemId },
-      {
-        $set: {
-          processingStatus: "failed",
-          processingError:  error.message,
-        },
-      }
+      { $set: 
+        { 
+          processingStatus: "failed", 
+          processingError: error.message 
+        } 
+      },
     );
-    throw error; // re-throw so BullMQ registers the job as failed + retries
+    throw error;
   }
 };
 
-
 // Partial re-processing  (user edited note/highlights → regenerate)
 
-/**
- * reprocessSummary(itemId)
- * Re-generates summary + shortNote + keyPoints only.
- * Lighter than full reprocessing — called when user adds highlights/notes.
- */
 export const reprocessSummary = async (itemId) => {
   const item = await SaveItem.findById(itemId);
   if (!item) throw new Error(`SaveItem not found: ${itemId}`);
-
-  const summaryResult = await generateSummary({
+  const r = await generateSummary({
     title: item.title,
     description: item.description,
     content: item.description,
     type: item.type,
   });
-
   await SaveItem.updateOne(
     { _id: itemId },
     {
       $set: {
-        summary: summaryResult.summary,
-        shortNote: summaryResult.shortNote,
-        keyPoints: summaryResult.keyPoints,
+        summary: r.summary,
+        shortNote: r.shortNote,
+        keyPoints: r.keyPoints,
       },
-    }
+    },
   );
-
-  return summaryResult;
+  return r;
 };
 
-/**
- * reprocessFull(itemId)
- * Forces a full re-run of every AI step, ignoring cached values.
- */
+// reprocessFull(itemId) - Forces a full re-run of every AI step, ignoring cached values.
 export const reprocessFull = async (itemId) => {
-  // Reset fields so pipeline re-runs all steps
   await SaveItem.updateOne(
     { _id: itemId },
     {
@@ -166,11 +137,10 @@ export const reprocessFull = async (itemId) => {
         keyPoints: [],
         topics: [],
         keywords: [],
-        // questions: [],
         processingStatus: "pending",
-        processingError:  null,
+        processingError: null,
       },
-    }
+    },
   );
   return processAIForSaveItem(itemId);
 };
