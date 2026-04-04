@@ -1,13 +1,8 @@
 // src/workers/processItem.worker.js
-//
-// BullMQ worker that handles all background processing for saved items.
-//
-// Job types: 
-// "process-save" - fresh save: scrape → AI → embed
-// "reprocess-save" - re-run AI (and optionally scraping) on an existing item
-//
-// Concurrency: 3 jobs in parallel 
-// Retry: 3 attempts with exponential backoff (configured on the queue)
+
+
+import "dotenv/config";
+import connectDatabase from "../config/database.js";
 
 import { Worker } from "bullmq";
 import { SaveItem } from "../models/SaveItem.models.js";
@@ -17,16 +12,16 @@ import { reEmbedItem } from "../services/embedding.service.js";
 import { QUEUE_NAME } from "../jobs/save.queue.js";
 
 
-// Job handlers
+// handleProcessSave — Fresh save: scrape → AI → embed
 
 /**
- * handleProcessSave(job)
- *
  * Full pipeline for a freshly saved URL:
  *   1. Mark as "processing"
  *   2. Scrape URL → enrich SaveItem fields
  *   3. Run AI pipeline (summary, tags, topics, questions, embedding)
  */
+
+
 const handleProcessSave = async (job) => {
      const { saveId } = job.data;
 
@@ -50,41 +45,42 @@ const handleProcessSave = async (job) => {
 
      // Scrape
      // Only scrape if we don't already have content (allows manual saves to skip)
-     let scrapedData = null;
+     // let scrapedData = null;
      if (item.url && (!item.description || item.description.length < 100)) {
           try {
                console.log(` [${job.id}] Scraping: ${item.url}`);
-               scrapedData = await scrapeContent(item.url);
+               const scraped = await scrapeContent(item.url);
 
                // Persist scraped fields immediately so partial data is never lost
                await SaveItem.findByIdAndUpdate(saveId, {
                     $set: {
-                         title: scrapedData.title || item.title,
-                         description: scrapedData.content || scrapedData.description || "",
-                         thumbnail: scrapedData.thumbnail || "",
-                         siteName: scrapedData.siteName || "",
-                         favicon: scrapedData.favicon || "",
-                         "sourceMeta.author": scrapedData.author || "",
-                         "sourceMeta.wordCount": scrapedData.wordCount || 0,
-                         "sourceMeta.platform": scrapedData.platform || "website",
-                         "sourceMeta.readTime": Math.ceil((scrapedData.wordCount || 0) / 200),
-                         ...(scrapedData.videoId && { "sourceMeta.videoId": scrapedData.videoId }),
-                         ...(scrapedData.pages && { "sourceMeta.pages": scrapedData.pages }),
+                         title: scraped.title || item.title,
+                         description: scraped.content || scraped.description || "",
+                         thumbnail: scraped.thumbnail || "",
+                         siteName: scraped.siteName || "",
+                         favicon: scraped.favicon || "",
+                         "sourceMeta.author": scraped.author || "",
+                         "sourceMeta.wordCount": scraped.wordCount || 0,
+                         "sourceMeta.platform": scraped.platform || "website",
+                         "sourceMeta.readTime": Math.ceil((scraped.wordCount || 0) / 200),
+                         ...(scraped.videoId && { "sourceMeta.videoId": scraped.videoId }),
+                         ...(scraped.pages && { "sourceMeta.pages": scraped.pages }),
                     },
                });
+               console.log(`✅ [${job.id}] Scraped ${scraped.wordCount || 0} words from ${item.url}`);
           } catch (scrapeErr) {
                // Non-fatal: log and continue with whatever data we have
                console.error(`⚠️  [${job.id}] Scrape failed for ${item.url}:`, scrapeErr.message);
-               await SaveItem.findByIdAndUpdate(saveId, {
-                    $set: { "sourceMeta.platform": item.type || "website" },
-               });
+               // await SaveItem.findByIdAndUpdate(saveId, {
+               //      $set: { "sourceMeta.platform": item.type || "website" },
+               // });
           }
      }
 
      await job.updateProgress(35);
 
      // AI processing 
-     // processAIForSaveItem re-fetches the item so it picks up the scraped fields
+     // processAIForSaveItem re-fetches the item so it sees the scraped description
      await processAIForSaveItem(saveId);
 
      await job.updateProgress(100);
@@ -93,15 +89,9 @@ const handleProcessSave = async (job) => {
      return { success: true, saveId };
 };
 
-/**
- * handleReprocessSave(job)
- *
- * Re-runs AI processing on an existing item.
- * Used when: user adds highlights/notes, manual re-trigger, version upgrade.
- *
- * job.data.full = true  → reset all AI fields and redo everything
- * job.data.full = false → redo only summary + embedding
- */
+
+// handleReprocessSave — Re-run AI on an existing item
+
 const handleReprocessSave = async (job) => {
      const { saveId, full } = job.data;
 
@@ -124,10 +114,10 @@ const handleReprocessSave = async (job) => {
 
      await job.updateProgress(100);
      console.log(`✅ [${job.id}] Reprocess done: ${saveId}`);
-
      return { success: true, saveId, full };
 };
 
+// Job router
 // Router — dispatches by job name
 
 const jobRouter = async (job) => {
@@ -141,19 +131,18 @@ const jobRouter = async (job) => {
 
 // Worker factory
 
-let _worker = null;
-
 /**
  * startWorker()
  * Starts the BullMQ worker. Call once at app startup.
  * Returns the worker instance (useful for graceful shutdown in tests).
  */
+
+let _worker = null;
+
 export const startWorker = () => {
      if (_worker) return _worker; // idempotent
 
-     if (!process.env.REDIS_URL) {
-          throw new Error("REDIS_URL is not set — cannot start worker");
-     }
+     if (!process.env.REDIS_URL) throw new Error("REDIS_URL is not set");
 
      _worker = new Worker(QUEUE_NAME, jobRouter, {
           connection: { 
@@ -164,23 +153,26 @@ export const startWorker = () => {
      });
 
      // ── Event listeners ────────────────────────────────────────────────────────
-     _worker.on("active", (job) => {
-          console.log(`▶️  Job active  [${job.id}] ${job.name} — saveId: ${job.data.saveId}`);
-     });
+     // _worker.on("active", (job) => {
+     //      console.log(`Job active  [${job.id}] ${job.name} — saveId: ${job.data.saveId}`);
+     // });
+     
+     _worker.on("active", (job) => console.log(`Active [${job.id}] ${job.name}`));
 
      _worker.on("completed", (job, result) => {
           if (result?.skipped) {
-               console.log(`⏭️  Job skipped [${job.id}] — item no longer exists`);
+               console.log(`Job skipped [${job.id}] — item no longer exists`);
           } else {
-               console.log(`✅ Job done    [${job.id}] ${job.name}`);
+               console.log(`Job Done [${job.id}] ${job.name}`);
           }
      });
 
      _worker.on("failed", (job, err) => {
-          console.error(
-               `❌ Job failed  [${job?.id}] ${job?.name} (attempt ${job?.attemptsMade}/${job?.opts?.attempts}):`,
-               err.message
-          );
+          // console.error(
+          //      `❌ Job Failed  [${job?.id}] ${job?.name} (attempt ${job?.attemptsMade}/${job?.opts?.attempts}):`,
+          //      err.message
+          // );
+          console.error(`❌ Failed  [${job?.id}] ${job?.name}: ${err.message}`);
 
           // On final failure, make sure the DB reflects the error
           if (job?.data?.saveId && job?.attemptsMade >= (job?.opts?.attempts ?? 3)) {
@@ -194,16 +186,16 @@ export const startWorker = () => {
      });
 
      _worker.on("progress", (job, progress) => {
-          console.log(`📊 Job progress [${job.id}]: ${progress}%`);
+          console.log(`Job progress [${job.id}]: ${progress}%`);
      });
 
      _worker.on("error", (err) => {
           console.error("❌ Worker error:", err.message);
      });
 
-     // ── Graceful shutdown ──────────────────────────────────────────────────────
+     // ── Graceful shutdown
      const shutdown = async (signal) => {
-          console.log(`\n${signal} received — closing worker gracefully…`);
+          console.log(`\n${signal} received — Closing worker..`);
           await _worker.close();
           console.log("✅ Worker closed");
           process.exit(0);
@@ -226,3 +218,18 @@ export const stopWorker = async () => {
           _worker = null;
      }
 };
+
+
+
+// ✅ AUTO-START when run directly: `node src/workers/processItem.worker.js`
+// This was MISSING — worker never started without a separate startWorker() call
+
+connectDatabase()
+  .then(() => {
+    console.log("🟢 Worker: MongoDB connected");
+    startWorker();
+  })
+  .catch((err) => {
+    console.error("❌ Worker: MongoDB connection failed:", err.message);
+    process.exit(1);
+  });
