@@ -22,6 +22,8 @@ import userRouter from "./routes/user.routes.js";
 import savesRouter from "./routes/saves.routes.js";
 import collectionsRouter from "./routes/collections.routes.js";
 import tagsRouter from "./routes/tags.routes.js";
+import clusteringRouter  from "./routes/clustering.routes.js";
+import graphRouter       from "./routes/graph.routes.js";
 
 const app = express();
 
@@ -44,6 +46,8 @@ app.use("/api/users", userRouter);
 app.use("/api/saves", savesRouter);
 app.use("/api/collections", collectionsRouter);
 app.use("/api/tags", tagsRouter);
+app.use("/api/clusters", clusteringRouter);
+app.use("/api/graph", graphRouter);
 
 app.get("/", (req, res) => res.send("Raven AI running..."));
 app.get("/health", (req, res) =>
