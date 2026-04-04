@@ -1,22 +1,18 @@
 // src/services/embedding.service.js
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters"; 
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { generateEmbeddingsBatch, generateEmbedding } from "./ai.service.js";
 import { getPineconeIndex } from "../config/pinecone.config.js";
-import { SaveItem } from "../models/SaveItem.models.js";  
-
-// ─────────────────────────────────────────────────────────────────────────────
+import { SaveItem } from "../models/SaveItem.models.js";
 // Re-export embedText from ai.service so callers only need one import
-// ─────────────────────────────────────────────────────────────────────────────
 export { generateEmbedding as embedText };
 
 const splitter = new RecursiveCharacterTextSplitter({
-  chunkSize:    800,
+  chunkSize: 800,
   chunkOverlap: 150,
-  separators:   ["\n\n", "\n", ". ", "! ", "? ", " ", ""],
+  separators: ["\n\n", "\n", ". ", "! ", "? ", " ", ""],
 });
 
-const PINECONE_BATCH_SIZE = 100;
-
+// const PINECONE_BATCH_SIZE = 100;
 
 // export const  embedText = async (texts) => {
 //   if (!texts || texts.length === 0) return [];  const validTexts = texts
@@ -34,14 +30,15 @@ const PINECONE_BATCH_SIZE = 100;
 //   results.push(...response.data.map((item) => item.embedding));
 // } 
 // return results;
-
-
-
 // Chunk text
 export const chunkText = async (text) => {
-  if (!text || text.trim().length === 0) return [];
-  const chunks = await splitter.splitText(text.trim());
-  return chunks.map((c) => c.trim()).filter((c) => c.length > 20);
+  if (!text || !text.trim()) return [];
+  return (
+    await splitter
+    .splitText(text.trim())
+  )
+  .map((c) => c.trim())
+  .filter((c) => c.length > 20);
 };
 
 // Process SaveItem → Chunk → Embed → Upsert to Pinecone
@@ -57,34 +54,29 @@ export const chunkText = async (text) => {
  *   5. Upsert vectors to Pinecone
  *   6. Update SaveItem: embeddingId, hasEmbedding, embeddingVersion
  */
+
 export const processAndStoreEmbedding = async (itemId) => {
   const item = await SaveItem.findById(itemId).lean();
   if (!item) throw new Error(`SaveItem not found: ${itemId}`);
 
-  // Build rich text
-  // let fullText = [item.title, item.description, item.summary, item.shortNote, item.userNote]
-  // .filter(Boolean)
-  // .join("\n\n");
- 
-  // if (item.headings?.length > 0) fullText += "\n\nHeadings:\n" + item.headings.map((h) => `H${h.level}: ${h.text}`).join("\n");
-
-  // if (item.highlights?.length > 0) fullText += "\n\nHighlights:\n" + item.highlights.map((h) => h.text).join("\n");
-
-  // if (item.keyPoints?.length > 0) fullText += "\n\nKey Points:\n" + item.keyPoints.join("\n");
- 
   // Build rich text blob
-  let fullText = [item.title, item.description, item.summary, item.shortNote, item.userNote]
+
+  let fullText = [
+    item.title,
+    item.description,
+    item.summary,
+    item.shortNote,
+    item.userNote,
+  ]
     .filter(Boolean)
     .join("\n\n");
- 
   if (item.highlights?.length > 0)
-    fullText += "\n\nHighlights:\n" + item.highlights.map((h) => h.text).join("\n");
- 
+    fullText +=
+      "\n\nHighlights:\n" + item.highlights.map((h) => h.text).join("\n");
   if (item.keyPoints?.length > 0)
     fullText += "\n\nKey Points:\n" + item.keyPoints.join("\n");
 
-
-   if (!fullText.trim()) {
+  if (!fullText.trim()) {
     await SaveItem.updateOne(
       { _id: itemId },
       {
@@ -93,30 +85,25 @@ export const processAndStoreEmbedding = async (itemId) => {
           processingStatus: "failed",
           processingError: "No embeddable text",
         },
-      }
+      },
     );
-
     return [];
   }
 
   // Chunk
   const chunks = await chunkText(fullText);
-  if (chunks.length === 0) {
-    console.warn(`⚠️ Splitter produced 0 chunks for item: ${itemId}`);
-    return [];
-  }
+  if (!chunks.length === 0) return [];
 
   // Batch embed
   const embeddings = await generateEmbeddingsBatch(chunks);
 
   // Build Pinecone vectors
-  const vectors   = [];
+  const vectors = [];
   const vectorIds = [];
 
   for (let i = 0; i < chunks.length; i++) {
     if (!embeddings[i] || chunks[i].length < 40) continue;
-    const vectorId = `${item.user.toString()}_${item._id.toString()}_${i}`;
-
+    const vectorId = `${item.user}_${item._id}_${i}`;
     vectors.push({
       id: vectorId,
       values: embeddings[i],
@@ -124,10 +111,9 @@ export const processAndStoreEmbedding = async (itemId) => {
         userId: item.user.toString(),
         itemId: item._id.toString(),
         chunkIndex: i,
-        // BUG FIX: was `chunks.slice(0, 500)` (entire array) — should be `chunks[i].slice(0, 500)`
         text: chunks[i].slice(0, 500),
         type: item.type || "link",
-        title: (item.title || "Untitled").slice(0, 150),
+        title: (item.title || "").slice(0, 150),
         platform: item.sourceMeta?.platform || "website",
         createdAt: item.createdAt?.toISOString() || new Date().toISOString(),
         clusterId: item.clusterId || "",
@@ -142,50 +128,45 @@ export const processAndStoreEmbedding = async (itemId) => {
   // Upsert to Pinecone (batched)
 
   if (vectors.length > 0) {
-    const pineconeIndex = await getPineconeIndex();
-    for (let i = 0; i < vectors.length; i += PINECONE_BATCH_SIZE) {
-      await pineconeIndex.upsert(vectors.slice(i, i + PINECONE_BATCH_SIZE));
-    }
-    console.log(`✅ Stored ${vectors.length} vectors for item ${itemId}`);
+    const index = await getPineconeIndex();
+    for (let i = 0; i < vectors.length; i += 100)
+      await index.upsert(vectors.slice(i, i + 100));
+    console.log(`✅ Stored ${vectors.length} vectors for ${itemId}`);
   }
-
-  // Update MongoDB
+// Update MongoDB
 
   await SaveItem.updateOne(
-    { _id: itemId }, 
+    { _id: itemId },
     {
       $set: {
         embeddingId: vectorIds[0] || null,
         hasEmbedding: vectorIds.length > 0,
         embeddingVersion: (item.embeddingVersion || 0) + 1,
         processedAt: new Date(),
+      },
     },
-  });
+  );
   return vectorIds;
 };
-
 // Delete embeddings
 
 export const deleteEmbeddings = async (itemId, userId) => {
   if (!itemId || !userId) return;
   try {
-    const pineconeIndex = await getPineconeIndex();
-    await pineconeIndex.deleteMany({
-      filter: { itemId: { 
-        $eq: itemId.toString() 
-        }, 
-        userId: { 
-          $eq: userId.toString() 
-        }
+    const index = await getPineconeIndex();
+    await index.deleteMany({
+      filter: {
+        itemId: { $eq: itemId.toString() },
+        userId: { $eq: userId.toString() },
       },
     });
-    console.log(`🗑️ Deleted embeddings for item ${itemId}`);
   } catch {
     // Free plan fallback: ID-based delete
     try {
-      const pineconeIndex = await getPineconeIndex();
-      const ids = Array.from({ length: 200 }, (_, i) => `${userId}_${itemId}_${i}`);
-      await pineconeIndex.deleteMany(ids);
+      const index = await getPineconeIndex();
+      await index.deleteMany(
+        Array.from({ length: 200 }, (_, i) => `${userId}_${itemId}_${i}`),
+      );
     } catch (err) {
       console.error(`Fallback delete failed for ${itemId}:`, err.message);
     }
@@ -196,33 +177,31 @@ export const deleteEmbeddings = async (itemId, userId) => {
 export const reEmbedItem = async (itemId) => {
   const item = await SaveItem.findById(itemId);
   if (!item) throw new Error(`Item not found: ${itemId}`);
-
   await SaveItem.updateOne(
-    { _id: itemId }, 
-    {
+    { _id: itemId },
+    { 
       $set: { 
-        processingStatus: "processing", 
-        hasEmbedding: false 
+        processingStatus: "processing",
+         hasEmbedding: false 
+        } 
     },
-  });
-
+  );
   await deleteEmbeddings(itemId, item.user.toString());
-  return await processAndStoreEmbedding(itemId);
+  return processAndStoreEmbedding(itemId);
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
 // 5. Cosine similarity (local)
-// ─────────────────────────────────────────────────────────────────────────────
 export const cosineSimilarity = (a, b) => {
-  if (!a || !b || a.length !== b.length) {
-    throw new Error("cosineSimilarity: vectors must exist and have equal dimensions");
-  }
-  let dot = 0, magA = 0, magB = 0;
+  if (!a || !b || a.length !== b.length)
+    throw new Error("Vectors must exist and have equal dimensions");
+  let dot = 0,
+    magA = 0,
+    magB = 0;
   for (let i = 0; i < a.length; i++) {
-    dot  += a[i] * b[i];
+    dot += a[i] * b[i];
     magA += a[i] * a[i];
     magB += b[i] * b[i];
   }
-  const denom = Math.sqrt(magA) * Math.sqrt(magB);
-  return denom === 0 ? 0 : dot / denom;
+  const d = Math.sqrt(magA) * Math.sqrt(magB);
+  return d === 0 ? 0 : dot / d;
 };
