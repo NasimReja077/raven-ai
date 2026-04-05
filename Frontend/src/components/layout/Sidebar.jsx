@@ -1,28 +1,25 @@
 // ─── src/components/layout/Sidebar.jsx ───────────────────────────────────────
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { useState } from "react";
 import {
   RiHome4Line,
   RiHeartLine,
   RiArchiveLine,
   RiShareLine,
   RiApps2Line,
-  RiSettings4Line,
 } from "react-icons/ri";
-import { LuSparkles } from "react-icons/lu";
 import { useCollections } from "../../features/collections/hooks/useCollections";
 import { useTags } from "../../features/tags/hooks/useTags";
 import { useLogout } from "../../features/auth/hooks/useAuth";
 import { selectUser } from "../../features/auth/store/auth.slice";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/common/UI/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/common/UI/tooltip";
-import { COLLECTION_ICONS, getIcon } from "../common/common/IconMap";
+} from "@/components/ui/tooltip";
+import { COLLECTION_ICONS, getIcon } from "../common/IconMap";
 import { cn } from "../../lib/utils";
 
 const NAV = [
@@ -59,12 +56,22 @@ export default function Sidebar() {
 
   return (
     <aside className="w-56 shrink-0 flex flex-col border-r border-sidebar-border bg-sidebar h-full">
-      {/* Logo */}
+      {/* Logo — uses Raven wordmark */}
       <NavLink
         to="/"
         className="flex items-center gap-2 px-4 py-4 border-b border-sidebar-border"
       >
-        <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-sm font-black text-white">
+        <img
+          src="/raven-logo.png"
+          alt="Raven"
+          className="h-7 w-auto object-contain"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+            e.currentTarget.nextSibling.style.display = "flex";
+          }}
+        />
+        {/* Fallback if image missing */}
+        <div className="hidden w-7 h-7 rounded-lg bg-white/10 items-center justify-center text-sm font-black text-white">
           R
         </div>
         <span className="font-bold text-sidebar-foreground text-sm tracking-wide">
@@ -73,7 +80,6 @@ export default function Sidebar() {
       </NavLink>
 
       <ScrollArea className="flex-1 px-2 py-3">
-        {/* Main nav */}
         <nav className="space-y-0.5">
           {NAV.map((n) => (
             <NavItem key={n.to} {...n} />
@@ -162,7 +168,7 @@ export default function Sidebar() {
         </div>
       </ScrollArea>
 
-      {/* Bottom: user */}
+      {/* Bottom user row */}
       <div className="border-t border-sidebar-border p-3">
         <div className="flex items-center gap-2">
           <NavLink
