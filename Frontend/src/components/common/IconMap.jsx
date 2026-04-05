@@ -1,4 +1,4 @@
-// ─── src/components/common/IconMap.jsx ───────────────────────────────────────
+// ─── src/components/common/IconMap.jsx 
 import {
      RiFolder2Fill,
      RiCodeBoxFill,
@@ -10,7 +10,7 @@ import {
      RiMusicFill,
      RiHeartFill,
      RiGlobeFill,
-     RiStar2Fill,
+     RiStarFill,  
      RiFireFill,
 } from "react-icons/ri";
 
@@ -25,7 +25,7 @@ export const COLLECTION_ICONS = {
      music: <RiMusicFill />,
      heart: <RiHeartFill />,
      globe: <RiGlobeFill />,
-     star: <RiStar2Fill />,
+     star: <RiStarFill />, 
      fire: <RiFireFill />,
 };
 
