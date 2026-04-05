@@ -1,12 +1,16 @@
+
 // ─── src/components/common/KebabMenu.jsx ─────────────────────────────────────
-import { RiArchiveLine, RiDeleteBinLine, RiFolderAddLine, RiPriceTag3Line, RiCheckLine } from "react-icons/ri";
+// ✅ FIXED: added missing RiMoreLine import
+import {
+  RiArchiveLine, RiDeleteBinLine, RiFolderAddLine,
+  RiCheckLine, RiMoreLine, 
+} from "react-icons/ri";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger,
   DropdownMenuSubContent, DropdownMenuTrigger, DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
-import { useSaves } from "../../../features/saves/hooks/useSaves";
-import { savesApi } from "../../../features/saves/api/saves.api";
+import { savesApi } from "../../features/saves/api/saves.api";
 import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
@@ -18,7 +22,9 @@ export default function KebabMenu({ save, collections = [], onDelete, onArchive 
       await savesApi.addToCollection(save._id, { collectionId: colId });
       qc.invalidateQueries({ queryKey: ["saves"] });
       toast.success("Added to collection");
-    } catch { toast.error("Failed"); }
+    } catch {
+      toast.error("Failed to add to collection");
+    }
   };
 
   return (
@@ -29,7 +35,6 @@ export default function KebabMenu({ save, collections = [], onDelete, onArchive 
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44 text-sm">
-        {/* Add to collection submenu */}
         {collections.length > 0 && (
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="gap-2">
@@ -38,8 +43,11 @@ export default function KebabMenu({ save, collections = [], onDelete, onArchive 
             <DropdownMenuPortal>
               <DropdownMenuSubContent>
                 {collections.map((col) => (
-                  <DropdownMenuItem key={col._id} className="gap-2" onClick={() => handleAddToCollection(col._id)}>
-                    <RiCheckLine size={12} className={save.collections?.some((c) => c._id === col._id || c === col._id) ? "opacity-100" : "opacity-0"} />
+                  <DropdownMenuItem key={col._id} className="gap-2"
+                    onClick={() => handleAddToCollection(col._id)}>
+                    <RiCheckLine size={12}
+                      className={save.collections?.some((c) => (c._id || c) === col._id)
+                        ? "opacity-100" : "opacity-0"} />
                     {col.name}
                   </DropdownMenuItem>
                 ))}

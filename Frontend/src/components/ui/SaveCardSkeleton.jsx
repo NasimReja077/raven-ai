@@ -1,13 +1,8 @@
-// src/components/ui/Skeleton.jsx
-import { cn } from "@/lib/utils";
 
-export function Skeleton({ className, ...props }) {
-  return (
-    <div className={cn("animate-pulse rounded-md bg-muted", className)} {...props} />
-  );
-}
+// ─── src/components/ui/SaveCardSkeleton.jsx ──────────────────────────────────
+import { Skeleton } from "@/components/ui/skeleton";   // ✅ imports the primitive above
+import { cn } from "../../lib/utils";
 
-// Keep this here
 export function SaveCardSkeleton() {
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">

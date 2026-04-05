@@ -1,4 +1,3 @@
-
 // ─── src/features/saves/components/SaveDetailPanel.jsx ───────────────────────
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,7 +13,7 @@ import { useAddHighlight, useDeleteHighlight, useUpdateSave, useDeleteSave } fro
 import { useSaveById } from "../hooks/useSaves";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
 import { cn, timeAgo, fmtDate, TYPE_LABELS } from "../../../lib/utils";
-import { SaveCardSkeleton } from "../../../components/ui/Skeleton";
+// import { SaveCardSkeleton } from "../../../components/ui/SaveCardSkeleton";   // ← FIXED
 
 export default function SaveDetailPanel({ save: initialSave, onClose }) {
   const { data: save, isLoading } = useSaveById(initialSave?._id);

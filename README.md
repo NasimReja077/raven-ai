@@ -42,3 +42,47 @@ Raven uses **Semantic Search** and **Topic Clustering** to ensure that what you 
 - `/server` - Node.js API & authentication
 - `/ai-service` - Python service for semantic processing
 
+https://animejs.com/
+https://reactbits.dev/backgrounds/floating-lines
+https://animate-ui.com/
+
+
+{{baseUrl}}/clusters/run
+
+{
+    "success": false,
+    "message": "Cannot read properties of undefined (reading 'k')",
+    "stack": "TypeError: Cannot read properties of undefined (reading 'k')\n    at file:///C:/Users/User/Desktop/New%20folder%20(2)/Raven%20AI/Backend/src/controllers/clustering.controller.js:14:11\n    at file:///C:/Users/User/Desktop/New%20folder%20(2)/Raven%20AI/Backend/src/utils/asyncHandler.js:4:21\n    at Layer.handleRequest (C:\\Users\\User\\Desktop\\New folder (2)\\Raven AI\\Backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at next (C:\\Users\\User\\Desktop\\New folder (2)\\Raven AI\\Backend\\node_modules\\router\\lib\\route.js:157:13)\n    at Route.dispatch (C:\\Users\\User\\Desktop\\New folder (2)\\Raven AI\\Backend\\node_modules\\router\\lib\\route.js:117:3)\n    at handle (C:\\Users\\User\\Desktop\\New folder (2)\\Raven AI\\Backend\\node_modules\\router\\index.js:435:11)\n    at Layer.handleRequest (C:\\Users\\User\\Desktop\\New folder (2)\\Raven AI\\Backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at C:\\Users\\User\\Desktop\\New folder (2)\\Raven AI\\Backend\\node_modules\\router\\index.js:295:15\n    at processParams (C:\\Users\\User\\Desktop\\New folder (2)\\Raven AI\\Backend\\node_modules\\router\\index.js:582:12)\n    at next (C:\\Users\\User\\Desktop\\New folder (2)\\Raven AI\\Backend\\node_modules\\router\\index.js:291:5)"
+}
+
+
+{{baseUrl}}/clusters/dbscan
+
+
+{
+    "success": false,
+    "message": "Cannot read properties of undefined (reading 'epsilon')",
+    "stack": "TypeError: Cannot read properties of undefined (reading 'epsilon')\n    at file:///C:/Users/User/Desktop/New%20folder%20(2)/Raven%20AI/Backend/src/controllers/clustering.controller.js:39:11\n    at file:///C:/Users/User/Desktop/New%20folder%20(2)/Raven%20AI/Backend/src/utils/asyncHandler.js:4:21\n    at Layer.handleRequest (C:\\Users\\User\\Desktop\\New folder (2)\\Raven AI\\Backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at next (C:\\Users\\User\\Desktop\\New folder (2)\\Raven AI\\Backend\\node_modules\\router\\lib\\route.js:157:13)\n    at Route.dispatch (C:\\Users\\User\\Desktop\\New folder (2)\\Raven AI\\Backend\\node_modules\\router\\lib\\route.js:117:3)\n    at handle (C:\\Users\\User\\Desktop\\New folder (2)\\Raven AI\\Backend\\node_modules\\router\\index.js:435:11)\n    at Layer.handleRequest (C:\\Users\\User\\Desktop\\New folder (2)\\Raven AI\\Backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at C:\\Users\\User\\Desktop\\New folder (2)\\Raven AI\\Backend\\node_modules\\router\\index.js:295:15\n    at processParams (C:\\Users\\User\\Desktop\\New folder (2)\\Raven AI\\Backend\\node_modules\\router\\index.js:582:12)\n    at next (C:\\Users\\User\\Desktop\\New folder (2)\\Raven AI\\Backend\\node_modules\\router\\index.js:291:5)"
+}
+
+
+{{baseUrl}}/clusters/dbscan/suggest
+
+{
+    "statusCode": 200,
+    "message": "DBSCAN parameter suggestions",
+    "data": {
+        "suggestedEpsilon": 0.25,
+        "suggestedMinPts": 2
+    },
+    "success": true
+}
+
+{{baseUrl}}/clusters
+
+{
+    "statusCode": 200,
+    "message": "Clusters fetched",
+    "data": [],
+    "success": true
+}

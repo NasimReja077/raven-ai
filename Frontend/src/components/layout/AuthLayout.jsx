@@ -5,7 +5,7 @@ import {
      selectIsAuth,
      selectAuthLoading,
 } from "../../features/auth/store/auth.slice";
-import { Spinner } from "../ui";
+import { Spinner } from "../ui/Spinner";
 
 export default function AuthLayout() {
      const isAuth = useSelector(selectIsAuth);
@@ -13,24 +13,43 @@ export default function AuthLayout() {
 
      if (isLoading)
           return (
-               <div className="h-screen flex items-center justify-center bg-background">
-                    <Spinner />
+               <div className="h-screen flex items-center justify-center bg-[#0a0a0a]">
+                    <Spinner size="lg" />
                </div>
           );
      if (isAuth) return <Navigate to="/" replace />;
 
      return (
-          <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center">
-               {/* Purple wave background */}
-               <div className="absolute inset-0 bg-linear-to-br from-[#0d0d0d] via-[#1a0a2e] to-[#0d0d0d]" />
-               <div className="absolute top-0 left-1/4 w-150 h-150 bg-purple-900/20 rounded-full blur-[120px] pointer-events-none" />
-               <div className="absolute bottom-0 right-1/4 w-100 h-100 bg-violet-900/15 rounded-full blur-[100px] pointer-events-none" />
+          <div className="min-h-screen relative overflow-hidden flex items-center justify-center">
+               {/* ── Background image (auth-background.webp) ── */}
+               <div
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                    style={{ backgroundImage: "url('/auth-background.webp')" }}
+               />
+               {/* Dark overlay so form stays readable */}
+               <div className="absolute inset-0 bg-black/60" />
 
+               {/* ── Form card ── */}
                <div className="relative z-10 w-full max-w-md px-4">
-                    {/* Logo */}
+                    {/* Logo: Raven-R-Logo.jpeg */}
                     <div className="flex flex-col items-center mb-8">
-                         <div className="w-12 h-12 rounded-2xl bg-[#1a1a1a] flex items-center justify-center mb-4 shadow-lg">
-                              <span className="text-2xl font-black text-white">R</span>
+                         <img
+                              src="/Raven-R-Logo.jpeg"
+                              alt="Raven"
+                              className="w-16 h-16 rounded-2xl object-cover shadow-2xl mb-4"
+                              onError={(e) => {
+                                   // Fallback letter if image missing
+                                   e.currentTarget.style.display = "none";
+                                   document.getElementById("raven-logo-fallback").style.display =
+                                        "flex";
+                              }}
+                         />
+                         {/* Hidden fallback */}
+                         <div
+                              id="raven-logo-fallback"
+                              className="hidden w-16 h-16 rounded-2xl bg-[#1a1a1a] items-center justify-center mb-4 shadow-2xl border border-white/10"
+                         >
+                              <span className="text-3xl font-black text-white">R</span>
                          </div>
                          <h1 className="text-2xl font-bold text-white tracking-tight">
                               Raven
@@ -39,6 +58,7 @@ export default function AuthLayout() {
                               Raven remembers everything.
                          </p>
                     </div>
+
                     <Outlet />
                </div>
           </div>
