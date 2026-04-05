@@ -6,7 +6,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ================== Optimized Custom Theme ================== */
+/* ================== Raven AI Custom Theme ================== */
 :root {
   /* Light Mode - Fresh & Vibrant */
   --background: #f0fdf4;
@@ -16,7 +16,7 @@
   --popover: #ffffff;
   --popover-foreground: #0a0a0a;
 
-  --primary: #c800de;           /* তোমার ম্যাজেন্টা - খুব ভালো */
+  --primary: #c800de;
   --primary-foreground: #ffffff;
 
   --secondary: #6e11b0;
@@ -35,6 +35,7 @@
   --input: #f3f4f6;
   --ring: #c800de;
 
+  /* Sidebar */
   --sidebar: #dcfce7;
   --sidebar-foreground: #0a0a0a;
   --sidebar-primary: #c800de;
@@ -48,15 +49,15 @@
 }
 
 .dark {
-  /* Dark Mode - High Contrast & Modern */
+  /* Dark Mode - Improved Contrast */
   --background: #0a0a0a;
-  --foreground: #ed6aff;           /* bright magenta */
+  --foreground: #ed6aff;     /* bright magenta */
   --card: #171717;
   --card-foreground: #fafafa;
   --popover: #171717;
   --popover-foreground: #fafafa;
 
-  --primary: #ff9af0;              /* bright magenta (optimized) */
+  --primary: #ff9af0;    /* bright magenta (optimized) */
   --primary-foreground: #0a0a0a;
 
   --secondary: #4c1d95;
@@ -75,6 +76,7 @@
   --input: #1f2937;
   --ring: #ff9af0;
 
+  /* Sidebar Dark */
   --sidebar: #111827;
   --sidebar-foreground: #f3f4f6;
   --sidebar-primary: #c026d3;
@@ -125,18 +127,26 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* Base Layer */
+/* Base Styles */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans antialiased;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
     font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+
+  /* Smooth transitions for theme switching */
+  * {
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
   }
 }
