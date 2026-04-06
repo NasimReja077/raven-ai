@@ -4,7 +4,7 @@ import 'dotenv/config';
 import app from "./src/app.js";
 import connectDatabase from "./src/config/database.js";
 import "./src/config/cloudinary.config.js";
-
+import "./src/workers/processItem.worker.js";
 
 // Connect to database
 
