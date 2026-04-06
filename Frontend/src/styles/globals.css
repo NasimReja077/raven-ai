@@ -1,3 +1,4 @@
+/* src/styles/globals.css */
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -6,120 +7,130 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ================== Raven AI Custom Theme ================== */
+/* ══════════════════════════════════════════════════════════════════════════════
+   RAVEN AI DESIGN TOKENS
+   ══════════════════════════════════════════════════════════════════════════════ */
 :root {
-  /* Light Mode - Fresh & Vibrant */
-  --background: #f0fdf4;
-  --foreground: #0a0a0a;
-  --card: #ffffff;
-  --card-foreground: #0a0a0a;
-  --popover: #ffffff;
-  --popover-foreground: #0a0a0a;
+  /* ── Palette ─────────────────────────────────────────────────── */
+  --raven-purple-50:  #f3f0ff;
+  --raven-purple-100: #e0d9fe;
+  --raven-purple-200: #c4b8fd;
+  --raven-purple-400: #8b5cf6;
+  --raven-purple-500: #7c3aed;
+  --raven-purple-600: #6d28d9;
+  --raven-purple-700: #5b21b6;
+  --raven-purple-900: #2e1065;
 
-  --primary: #c800de;
+  /* ── Light Mode ──────────────────────────────────────────────── */
+  --background:         #f8f7ff;
+  --foreground:         #0f0a1e;
+  --card:               #ffffff;
+  --card-foreground:    #0f0a1e;
+  --popover:            #ffffff;
+  --popover-foreground: #0f0a1e;
+
+  --primary:            #7c3aed;
   --primary-foreground: #ffffff;
+  --secondary:          #ede9fe;
+  --secondary-foreground: #4c1d95;
 
-  --secondary: #6e11b0;
-  --secondary-foreground: #ffffff;
+  --muted:              #f3f0ff;
+  --muted-foreground:   #6b5fa6;
+  --accent:             #ede9fe;
+  --accent-foreground:  #4c1d95;
 
-  --muted: #f0fdf4;
-  --muted-foreground: #374151;
-
-  --accent: #e9d4ff;
-  --accent-foreground: #1f2937;
-
-  --destructive: #ef4444;
+  --destructive:        #dc2626;
   --destructive-foreground: #ffffff;
 
-  --border: #e5e7eb;
-  --input: #f3f4f6;
-  --ring: #c800de;
+  --border:   #e5e0f8;
+  --input:    #f3f0ff;
+  --ring:     #7c3aed;
 
-  /* Sidebar */
-  --sidebar: #dcfce7;
-  --sidebar-foreground: #0a0a0a;
-  --sidebar-primary: #c800de;
+  /* Sidebar light */
+  --sidebar:                    #f3f0ff;
+  --sidebar-foreground:         #0f0a1e;
+  --sidebar-primary:            #7c3aed;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f3f4f6;
-  --sidebar-accent-foreground: #0a0a0a;
-  --sidebar-border: #e5e7eb;
-  --sidebar-ring: #c800de;
+  --sidebar-accent:             #ede9fe;
+  --sidebar-accent-foreground:  #4c1d95;
+  --sidebar-border:             #e5e0f8;
+  --sidebar-ring:               #7c3aed;
 
   --radius: 0.625rem;
 }
 
 .dark {
-  /* Dark Mode - Improved Contrast */
-  --background: #0a0a0a;
-  --foreground: #ed6aff;     /* bright magenta */
-  --card: #171717;
-  --card-foreground: #fafafa;
-  --popover: #171717;
-  --popover-foreground: #fafafa;
+  /* ── Dark Mode — Raven's natural habitat ─────────────────────── */
+  --background:         #080810;   /* near-black with a violet tint */
+  --foreground:         #ede9fe;   /* lavender white */
+  --card:               #0f0d1f;   /* dark violet card */
+  --card-foreground:    #ede9fe;
+  --popover:            #0f0d1f;
+  --popover-foreground: #ede9fe;
 
-  --primary: #ff9af0;    /* bright magenta (optimized) */
-  --primary-foreground: #0a0a0a;
+  --primary:            #a78bfa;   /* violet-400 — readable on dark */
+  --primary-foreground: #0f0a1e;
+  --secondary:          #1e1a3a;
+  --secondary-foreground: #c4b5fd;
 
-  --secondary: #4c1d95;
-  --secondary-foreground: #ffffff;
+  --muted:              #161428;
+  --muted-foreground:   #7c6eaa;
+  --accent:             #1e1a3a;
+  --accent-foreground:  #c4b5fd;
 
-  --muted: #1f2937;
-  --muted-foreground: #9ca3af;
+  --destructive:        #f87171;
+  --destructive-foreground: #0a0010;
 
-  --accent: #312e81;
-  --accent-foreground: #e0e7ff;
+  --border:   #2a2448;
+  --input:    #161428;
+  --ring:     #7c3aed;
 
-  --destructive: #f87171;
-  --destructive-foreground: #0a0a0a;
-
-  --border: #374151;
-  --input: #1f2937;
-  --ring: #ff9af0;
-
-  /* Sidebar Dark */
-  --sidebar: #111827;
-  --sidebar-foreground: #f3f4f6;
-  --sidebar-primary: #c026d3;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1f2937;
-  --sidebar-accent-foreground: #f3f4f6;
-  --sidebar-border: #374151;
-  --sidebar-ring: #c026d3;
+  /* Sidebar dark */
+  --sidebar:                    #0a0818;
+  --sidebar-foreground:         #ede9fe;
+  --sidebar-primary:            #a78bfa;
+  --sidebar-primary-foreground: #0f0a1e;
+  --sidebar-accent:             #1a1635;
+  --sidebar-accent-foreground:  #c4b5fd;
+  --sidebar-border:             #1f1c38;
+  --sidebar-ring:               #7c3aed;
 }
 
-/* ================== Tailwind v4 Theme Mapping ================== */
+/* ══════════════════════════════════════════════════════════════════════════════
+   TAILWIND V4 THEME MAPPING
+   ══════════════════════════════════════════════════════════════════════════════ */
 @theme inline {
-  --font-sans: 'Nunito Sans Variable', system-ui, sans-serif;
+  --font-sans:    'Nunito Sans Variable', system-ui, sans-serif;
   --font-heading: 'Roboto Slab Variable', serif;
 
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
+  --color-background:         var(--background);
+  --color-foreground:         var(--foreground);
+  --color-card:               var(--card);
+  --color-card-foreground:    var(--card-foreground);
+  --color-popover:            var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
+  --color-primary:            var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
+  --color-secondary:          var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
+  --color-muted:              var(--muted);
+  --color-muted-foreground:   var(--muted-foreground);
+  --color-accent:             var(--accent);
+  --color-accent-foreground:  var(--accent-foreground);
+  --color-destructive:        var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
+  --color-border:             var(--border);
+  --color-input:              var(--input);
+  --color-ring:               var(--ring);
 
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar:                    var(--sidebar);
+  --color-sidebar-foreground:         var(--sidebar-foreground);
+  --color-sidebar-primary:            var(--sidebar-primary);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-accent:             var(--sidebar-accent);
+  --color-sidebar-accent-foreground:  var(--sidebar-accent-foreground);
+  --color-sidebar-border:             var(--sidebar-border);
+  --color-sidebar-ring:               var(--sidebar-ring);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -127,26 +138,80 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* Base Styles */
+/* ══════════════════════════════════════════════════════════════════════════════
+   BASE STYLES
+   ══════════════════════════════════════════════════════════════════════════════ */
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+  * { @apply border-border outline-ring/50; }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    /* Subtle noise texture for depth in dark mode */
+    background-image: none;
+  }
+
+  .dark body {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23080810'/%3E%3Crect x='0' y='0' width='1' height='1' fill='%23ffffff04'/%3E%3C/svg%3E");
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
     font-weight: 700;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.02em;
   }
 
-  /* Smooth transitions for theme switching */
-  * {
-    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  /* Only transition colour/bg, not layout props (prevents jank on hover) */
+  *, *::before, *::after {
+    transition-property: color, background-color, border-color, box-shadow, opacity;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
+    transition-duration: 120ms;
   }
+
+  /* Custom scrollbar — thin and themed */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   UTILITY CLASSES
+   ══════════════════════════════════════════════════════════════════════════════ */
+@layer utilities {
+  /* Glass card — used for save cards, panels */
+  .glass-card {
+    background: color-mix(in srgb, var(--card) 85%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  /* Violet glow on focus / active items */
+  .glow-violet {
+    box-shadow: 0 0 0 1px var(--ring), 0 0 16px color-mix(in srgb, var(--ring) 25%, transparent);
+  }
+
+  /* Tag pill base (color set inline) */
+  .tag-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    border: 1px solid;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  /* Processing status indicators */
+  .status-pending    { @apply text-yellow-400; }
+  .status-processing { @apply text-blue-400; }
+  .status-completed  { @apply text-green-400; }
+  .status-failed     { @apply text-red-400; }
+
+  /* Hide scrollbar but keep scroll */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
