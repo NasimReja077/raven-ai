@@ -1,6 +1,12 @@
 // src/features/clusters/pages/ClustersPage.jsx
+
+
 import { useState } from "react";
-import { useClusters, useRunClustering, useClusterSaves } from "../hooks/useClusters";
+import {
+  useClusters,
+  useRunClustering,
+  useClusterSaves,
+} from "../hooks/useClusters";
 import { SaveCardSkeleton } from "../../../components/ui/skeleton";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { Spinner } from "../../../components/ui/Spinner";
@@ -8,12 +14,24 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import SaveCard from "../../../components/common/SaveCard";
 import SaveDetailPanel from "../../saves/components/SaveDetailPanel";
-import { RiApps2Line, RiRefreshLine, RiChevronDownLine, RiChevronUpLine } from "react-icons/ri";
+import {
+  RiApps2Line,
+  RiRefreshLine,
+  RiArrowDownSLine,
+  RiArrowUpSLine,
+} from "react-icons/ri";
+import { useNavigate } from "react-router-dom";
+import { cn } from "../../../lib/utils";
 
-// Colour ramp for cluster accent bars (deterministic hash)
 const CLUSTER_COLORS = [
-  "#7c3aed", "#0891b2", "#16a34a", "#d97706",
-  "#dc2626", "#db2777", "#7e22ce", "#0e7490",
+  "#7c3aed",
+  "#0891b2",
+  "#16a34a",
+  "#d97706",
+  "#dc2626",
+  "#db2777",
+  "#7e22ce",
+  "#0e7490",
 ];
 const clusterColor = (id = "") => {
   let hash = 0;
@@ -21,29 +39,25 @@ const clusterColor = (id = "") => {
   return CLUSTER_COLORS[Math.abs(hash) % CLUSTER_COLORS.length];
 };
 
-// ── Per-cluster expanded view ──────────────────────────────────────────────────
 function ClusterSaves({ clusterId, onSelect }) {
   const { data, isLoading } = useClusterSaves(clusterId);
   const saves = data?.saves || [];
-
   if (isLoading)
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pt-2">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pt-3">
         {[...Array(4)].map((_, i) => (
           <SaveCardSkeleton key={i} />
         ))}
       </div>
     );
-
-  if (saves.length === 0)
+  if (!saves.length)
     return (
-      <p className="text-xs text-muted-foreground py-4 text-center">
-        No saves found in this cluster.
+      <p className="text-xs text-muted-foreground text-center py-4">
+        No saves in this cluster.
       </p>
     );
-
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pt-2">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pt-3">
       {saves.map((s) => (
         <SaveCard key={s._id} save={s} onClick={onSelect} />
       ))}
@@ -51,14 +65,14 @@ function ClusterSaves({ clusterId, onSelect }) {
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
 export default function ClustersPage() {
   const { data: clusters = [], isLoading, error } = useClusters();
   const { mutate: runKMeans, isPending: running } = useRunClustering();
   const [expanded, setExpanded] = useState(null);
   const [selectedSave, setSelectedSave] = useState(null);
+  const nav = useNavigate();
 
-  const toggle = (id) => setExpanded((prev) => (prev === id ? null : id));
+  const toggle = (id) => setExpanded((p) => (p === id ? null : id));
 
   if (isLoading)
     return (
@@ -75,8 +89,8 @@ export default function ClustersPage() {
           <div>
             <h1 className="text-lg font-bold text-foreground">Clusters</h1>
             <p className="text-xs text-muted-foreground">
-              AI-grouped topics across your saves
-              {clusters.length > 0 && ` · ${clusters.length} clusters`}
+              AI-grouped topics · {clusters.length} cluster
+              {clusters.length !== 1 ? "s" : ""}
             </p>
           </div>
           <Button
@@ -87,26 +101,26 @@ export default function ClustersPage() {
             className="gap-1.5"
           >
             <RiRefreshLine
-              size={14}
+              size={13}
               className={running ? "animate-spin" : ""}
             />
             {running ? "Clustering…" : "Re-cluster"}
           </Button>
         </div>
 
-        {/* Error state */}
+        {/* Error */}
         {error && (
           <div className="p-4 rounded-xl border border-destructive/20 bg-destructive/5 text-sm text-destructive">
-            Failed to load clusters. Try re-clustering.
+            Failed to load clusters.
           </div>
         )}
 
-        {/* Empty state */}
+        {/* Empty */}
         {!error && clusters.length === 0 && (
           <EmptyState
             icon={RiApps2Line}
             title="No clusters yet"
-            description="Save at least 5 links so AI can process them, then click Re-cluster to group them by topic."
+            description="Save at least 5 items, process them, then click Re-cluster."
             action={
               <Button
                 size="sm"
@@ -114,82 +128,80 @@ export default function ClustersPage() {
                 disabled={running}
                 className="gap-1.5 mt-2"
               >
-                <RiRefreshLine size={14} className={running ? "animate-spin" : ""} />
-                {running ? "Clustering…" : "Run clustering"}
+                <RiRefreshLine
+                  size={13}
+                  className={running ? "animate-spin" : ""}
+                />
+                {running ? "Clustering…" : "Run now"}
               </Button>
             }
           />
         )}
 
         {/* Cluster list */}
-        {clusters.length > 0 && (
-          <div className="space-y-2">
-            {clusters.map((cluster, idx) => {
-              const color = clusterColor(cluster.clusterId);
-              const isOpen = expanded === cluster.clusterId;
-
-              return (
-                <div
-                  key={cluster.clusterId}
-                  className="border border-border rounded-xl bg-card overflow-hidden"
-                  style={{ borderLeftColor: color, borderLeftWidth: 3 }}
+        <div className="space-y-2">
+          {clusters.map((cluster, idx) => {
+            const color = clusterColor(cluster.clusterId);
+            const isOpen = expanded === cluster.clusterId;
+            return (
+              <div
+                key={cluster.clusterId}
+                className="border border-border rounded-2xl bg-card overflow-hidden"
+                style={{ borderLeftColor: color, borderLeftWidth: "3px" }}
+              >
+                <button
+                  className="w-full flex items-center justify-between p-4 hover:bg-accent/20 transition-colors text-left"
+                  onClick={() => toggle(cluster.clusterId)}
                 >
-                  <button
-                    className="w-full flex items-center justify-between p-4 hover:bg-accent/20 transition-colors text-left"
-                    onClick={() => toggle(cluster.clusterId)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ background: `${color}20` }}
-                      >
-                        <RiApps2Line size={16} style={{ color }} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-foreground leading-snug">
-                          {cluster.label || `Cluster ${idx + 1}`}
-                        </p>
-                        {cluster.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                            {cluster.description}
-                          </p>
-                        )}
-                      </div>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: `${color}18` }}
+                    >
+                      <RiApps2Line size={17} style={{ color }} />
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant="secondary" className="text-xs">
-                        {cluster.itemCount} saves
-                      </Badge>
-                      {isOpen ? (
-                        <RiChevronUpLine
-                          size={14}
-                          className="text-muted-foreground"
-                        />
-                      ) : (
-                        <RiChevronDownLine
-                          size={14}
-                          className="text-muted-foreground"
-                        />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        {cluster.label || `Cluster ${idx + 1}`}
+                      </p>
+                      {cluster.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                          {cluster.description}
+                        </p>
                       )}
                     </div>
-                  </button>
-
-                  {isOpen && (
-                    <div className="px-4 pb-4 border-t border-border/50 pt-3">
-                      <ClusterSaves
-                        clusterId={cluster.clusterId}
-                        onSelect={setSelectedSave}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                    <Badge variant="secondary" className="text-xs">
+                      {cluster.itemCount} saves
+                    </Badge>
+                    {isOpen ? (
+                      <RiArrowUpSLine
+                        size={14}
+                        className="text-muted-foreground"
                       />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                    ) : (
+                      <RiArrowDownSLine
+                        size={14}
+                        className="text-muted-foreground"
+                      />
+                    )}
+                  </div>
+                </button>
+                {isOpen && (
+                  <div className="px-4 pb-4 border-t border-border/40 bg-muted/10">
+                    <ClusterSaves
+                      clusterId={cluster.clusterId}
+                      onSelect={(s) => nav(`/saves/${s._id}`)}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Save detail panel */}
       {selectedSave && (
         <SaveDetailPanel
           save={selectedSave}
