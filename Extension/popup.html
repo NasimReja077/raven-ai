@@ -4,60 +4,65 @@
 <meta charset="UTF-8"/>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{width:340px;min-height:180px;font-family:-apple-system,'Segoe UI',sans-serif;background:#080810;color:#ede9fe}
-.header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #1f1c38}
-.logo{width:28px;height:28px;border-radius:8px;object-fit:cover}
-.app-name{font-size:15px;font-weight:700;color:#fff}
-.badge{margin-left:auto;font-size:10px;padding:2px 7px;border-radius:4px;background:#7c3aed22;color:#a78bfa;border:1px solid #7c3aed44}
+body{width:360px;min-height:160px;font-family:-apple-system,'Segoe UI',sans-serif;background:#080810;color:#ede9fe}
+.header{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid #1f1c38;background:#0a0818}
+.logo{width:26px;height:26px;border-radius:7px;object-fit:cover}
+.app-name{font-size:14px;font-weight:800;color:#fff;letter-spacing:-.3px}
+.badge{margin-left:auto;font-size:10px;padding:2px 8px;border-radius:5px;background:#7c3aed1a;color:#a78bfa;border:1px solid #7c3aed33;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
 .content{padding:14px}
-#login-state{display:none;text-align:center;padding:20px 0}
-#login-state p{font-size:13px;color:#7c6eaa;margin-bottom:12px}
-#login-state a{display:inline-block;background:#7c3aed;color:#fff;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none}
+#login-state,#success-state{display:none}
 #save-state{display:none}
+#login-state{text-align:center;padding:24px 0}
+#login-state p{font-size:13px;color:#7c6eaa;margin-bottom:14px}
+#login-state a{display:inline-block;background:#7c3aed;color:#fff;padding:9px 22px;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none}
 .page-info{background:#0f0d1f;border-radius:10px;padding:10px 12px;margin-bottom:10px;border:1px solid #2a2448}
-.page-title{font-size:12px;font-weight:600;color:#ede9fe;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.page-url{font-size:10px;color:#7c6eaa;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-textarea{width:100%;background:#0f0d1f;border:1px solid #2a2448;border-radius:8px;color:#ede9fe;font-size:12px;padding:8px 10px;resize:none;outline:none;font-family:inherit;height:58px;transition:border-color .15s}
+.page-title{font-size:12px;font-weight:600;color:#c4b5fd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.page-url{font-size:10px;color:#6b5fa6;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+textarea{width:100%;background:#0f0d1f;border:1px solid #2a2448;border-radius:9px;color:#ede9fe;font-size:12px;padding:9px 11px;resize:none;outline:none;font-family:inherit;height:60px;transition:border-color .15s}
 textarea:focus{border-color:#7c3aed}
 textarea::placeholder{color:#4b4270}
-.save-btn{width:100%;margin-top:10px;background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:6px}
-.save-btn:hover{background:#6d28d9}
-.save-btn:disabled{background:#2a2448;cursor:not-allowed}
-#success-state{display:none;text-align:center;padding:24px 0}
-.ok{width:48px;height:48px;border-radius:50%;background:#16a34a1a;border:2px solid #16a34a44;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px}
-#success-state h3{font-size:14px;font-weight:700;color:#fff}
-#success-state p{font-size:12px;color:#7c6eaa;margin-top:4px}
-.view-btn{display:inline-block;margin-top:12px;background:#0f0d1f;color:#a78bfa;padding:7px 16px;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;border:1px solid #7c3aed44}
-.error-msg{font-size:11px;color:#f87171;margin-top:8px;padding:6px 8px;background:#f8717110;border-radius:6px;border:1px solid #f8717130;display:none}
-.spinner{width:14px;height:14px;border-radius:50%;border:2px solid #ffffff30;border-top-color:#fff;animation:spin .7s linear infinite;display:inline-block}
+.save-btn{width:100%;margin-top:10px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;justify-content:center;gap:7px;letter-spacing:-.1px}
+.save-btn:hover{opacity:.88}
+.save-btn:disabled{opacity:.45;cursor:not-allowed}
+.error-msg{font-size:11px;color:#f87171;margin-top:8px;padding:7px 10px;background:#f8717110;border-radius:7px;border:1px solid #f8717128;display:none;line-height:1.4}
+#success-state{text-align:center;padding:28px 0}
+.ok-icon{width:52px;height:52px;border-radius:50%;background:#16a34a18;border:2px solid #16a34a40;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:24px}
+#success-state h3{font-size:15px;font-weight:800;color:#fff;margin-bottom:4px}
+#success-state p{font-size:12px;color:#7c6eaa}
+.view-btn{display:inline-flex;align-items:center;gap:5px;margin-top:14px;background:#0f0d1f;color:#a78bfa;padding:8px 18px;border-radius:9px;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #7c3aed33;transition:border-color .15s}
+.view-btn:hover{border-color:#7c3aed88}
+.spinner{width:13px;height:13px;border-radius:50%;border:2px solid #ffffff25;border-top-color:#fff;animation:spin .65s linear infinite;display:inline-block;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 <div class="header">
-  <img src="icons/icon16.png" class="logo" alt="" onerror="this.style.display='none'"/>
+  <img src="icons/icon48.png" class="logo" alt="" onerror="this.style.display='none'"/>
   <span class="app-name">Raven AI</span>
-  <span class="badge" id="user-badge">···</span>
+  <span class="badge" id="user-badge">checking…</span>
 </div>
 <div class="content">
   <div id="login-state">
     <p>Log in to Raven AI to save pages.</p>
-    <a href="http://localhost:5173/login" target="_blank">Open Raven AI</a>
+    <a href="http://localhost:5173/login" target="_blank">Open Raven AI →</a>
   </div>
   <div id="save-state">
     <div class="page-info">
       <div class="page-title" id="page-title">Loading…</div>
-      <div class="page-url" id="page-url"></div>
+      <div class="page-url"   id="page-url"></div>
     </div>
-    <textarea id="note" placeholder="Add a note… (optional)"></textarea>
+    <textarea id="note" placeholder="Add a note… (optional)" maxlength="500"></textarea>
     <div class="error-msg" id="error-msg"></div>
-    <button class="save-btn" id="save-btn">Save to Raven</button>
+    <button class="save-btn" id="save-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Save to Raven
+    </button>
   </div>
   <div id="success-state">
-    <div class="ok">✓</div>
-    <h3>Saved to Raven!</h3>
-    <p>AI is processing this page…</p>
-    <a href="http://localhost:5173" target="_blank" class="view-btn">Open Raven →</a>
+    <div class="ok-icon">✓</div>
+    <h3>Saved!</h3>
+    <p>Raven is processing this page…</p>
+    <a href="http://localhost:5173" target="_blank" class="view-btn">View in Raven →</a>
   </div>
 </div>
 <script src="popup.js"></script>

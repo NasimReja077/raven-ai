@@ -1,19 +1,39 @@
-const API = "http://localhost:5000/api";
+// extension/background.js
+const DEFAULT_API = "http://localhost:5000/api";
+
+async function getApiUrl() {
+  const { apiUrl } = await chrome.storage.local.get("apiUrl");
+  return apiUrl || DEFAULT_API;
+}
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
-    id: "raven-save",
-    title: "Save to Raven AI 🐦",
-    contexts: ["page", "link"],
+    id: "raven-save-page",
+    title: "Save page to Raven AI 🐦",
+    contexts: ["page"],
+  });
+  chrome.contextMenus.create({
+    id: "raven-save-link",
+    title: "Save link to Raven AI 🐦",
+    contexts: ["link"],
   });
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId !== "raven-save") return;
+  if (!["raven-save-page", "raven-save-link"].includes(info.menuItemId)) return;
   const url = info.linkUrl || tab?.url;
   if (!url) return;
+
   const { accessToken } = await chrome.storage.local.get("accessToken");
-  if (!accessToken) { chrome.tabs.create({ url: "http://localhost:5173/login" }); return; }
+  const API = await getApiUrl();
+
+  if (!accessToken) {
+    // Open login page
+    const { appUrl } = await chrome.storage.local.get("appUrl");
+    chrome.tabs.create({ url: `${appUrl || "http://localhost:5173"}/login` });
+    return;
+  }
+
   try {
     const r = await fetch(`${API}/saves`, {
       method: "POST",
@@ -24,13 +44,26 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     if (r.ok) {
       chrome.action.setBadgeText({ text: "✓", tabId: tab?.id });
       chrome.action.setBadgeBackgroundColor({ color: "#16a34a" });
-      setTimeout(() => chrome.action.setBadgeText({ text: "" }), 2000);
+      setTimeout(() => chrome.action.setBadgeText({ text: "" }), 2500);
+    } else {
+      chrome.action.setBadgeText({ text: "✗", tabId: tab?.id });
+      chrome.action.setBadgeBackgroundColor({ color: "#dc2626" });
+      setTimeout(() => chrome.action.setBadgeText({ text: "" }), 2500);
     }
-  } catch {}
+  } catch (err) {
+    console.error("Raven save error:", err);
+  }
 });
 
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === "RAVEN_SET_TOKEN" && msg.token) {
-    chrome.storage.local.set({ accessToken: msg.token });
+// Token bridge: receives token from the web app
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.type === "RAVEN_SET_TOKEN") {
+    chrome.storage.local.set({
+      accessToken: msg.token,
+      apiUrl: msg.apiUrl || DEFAULT_API,
+      appUrl: msg.appUrl || "http://localhost:5173",
+    });
+    sendResponse({ ok: true });
   }
+  return true;
 });
