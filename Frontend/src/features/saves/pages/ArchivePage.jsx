@@ -1,9 +1,7 @@
-
-
 // ─── src/features/saves/pages/ArchivePage.jsx ────────────────────────────────
 import { useSaves, useUpdateSave } from "../hooks/useSaves";
 import SaveCard from "../../../components/common/SaveCard";
-import { SaveCardSkeleton } from "../../../components/ui/Skeleton";
+import { SaveCardSkeleton } from "../../../components/ui/SaveCardSkeleton";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { Button } from "@/components/ui/button";
 import { RiArchiveLine } from "react-icons/ri";

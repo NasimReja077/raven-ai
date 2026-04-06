@@ -1,7 +1,7 @@
 // ─── src/features/saves/pages/FavoritesPage.jsx ──────────────────────────────
 import { useSaves } from "../hooks/useSaves";
 import SaveCard from "../../../components/common/SaveCard";
-import { SaveCardSkeleton } from "../../../components/ui/Skeleton";
+import { SaveCardSkeleton } from "../../../components/ui/SaveCardSkeleton";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { RiHeartLine } from "react-icons/ri";
 import { useState } from "react";
