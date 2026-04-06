@@ -1,17 +1,25 @@
-// dotenv.config();
-import 'dotenv/config'; 
-// import dotenv from "dotenv";
+import 'dotenv/config';
+
 import app from "./src/app.js";
 import connectDatabase from "./src/config/database.js";
 import "./src/config/cloudinary.config.js";
 import "./src/workers/processItem.worker.js";
 
-// Connect to database
+console.log("🚀 SERVER STARTING...");
 
-connectDatabase();
+const startServer = async () => {
+  try {
+    await connectDatabase();
 
-const PORT = process.env.PORT || 5000;
+    const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`✅ Server running in ${process.env.NODE_ENV || 'development'} mode || Port: ${PORT}`);
-});
+    app.listen(PORT, () => {
+      console.log(`✅ Ravin AI running on port ${PORT}`);
+    });
+
+  } catch (error) {
+    console.error("❌ SERVER START ERROR:", error.message);
+  }
+};
+
+startServer();

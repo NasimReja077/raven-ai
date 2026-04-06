@@ -184,26 +184,22 @@ export const scrapeWithPuppeteer = async (url) => {
 
   const browser = await puppeteer.launch({
     headless: true,
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
-      // "--disable-accelerated-2d-canvas",
-      "--no-first-run",
       "--disable-gpu",
+      "--no-first-run",
+      "--no-zygote",
+      "--single-process",         // ← required on Render free tier
       "--disable-extensions",
-      "--single-process",
-        // "--no-zygote",
     ],
     timeout: 20000,
   });
 
   try {
     const page = await browser.newPage();
-    // await page.setUserAgent(
-    //   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-    // );
-    // await page.setRequestInterception(true);
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
     await page.setRequestInterception(true);
     page.on("request", (req) => {
@@ -214,8 +210,7 @@ export const scrapeWithPuppeteer = async (url) => {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 18000 });
     return await page.content();
   } finally {
-    await browser.close()
-    .catch(() => {}); // always close, never throw from finally
+    await browser.close().catch(() => {});
   }
 };
 
