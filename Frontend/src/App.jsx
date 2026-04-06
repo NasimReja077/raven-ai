@@ -1,12 +1,4 @@
 // src/App.jsx
-//
-// FIX: Page refresh logout bug.
-// Problem: On refresh, window.__accessToken is wiped (it's in memory).
-// Bootstrap called fetchMe() → 401 → auth.slice set isAuthenticated=false → redirect to /login.
-// The axios interceptor *did* try to refresh, but fetchMe() had already rejected by then.
-//
-// Solution: Bootstrap first calls refreshToken() to restore the access token into memory,
-// THEN calls fetchMe() to populate the Redux store. If refresh fails → user truly not logged in.
 
 import { RouterProvider } from "react-router-dom";
 import { Provider } from "react-redux";
@@ -17,35 +9,55 @@ import { store } from "./app/store";
 import { queryClient } from "./lib/queryClient";
 import { router } from "./router";
 import { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
-import { fetchMe, setToken } from "./features/auth/store/auth.slice";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchMe, setToken, selectIsAuth } from "./features/auth/store/auth.slice";
 import { authApi } from "./features/auth/api/auth.api";
-import SplashScreen from "./components/common/SplashScreen.jsx";
+import SplashScreen from "./components/common/SplashScreen";
 
+// ── Extension token bridge ────────────────────────────────────────────────────
+// Posts the current access token to the page so the Raven browser extension
+// can pick it up via content.js without requiring the user to log in twice.
+function bridgeTokenToExtension(token) {
+  if (!token) return;
+  try {
+    window.postMessage({
+      type:   "RAVEN_TOKEN",
+      token,
+      apiUrl: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+      appUrl: window.location.origin,
+    }, window.location.origin);
+  } catch {}
+}
+
+// ── Bootstrap — refresh token on startup
 function Bootstrap({ children }) {
   const dispatch = useDispatch();
   const [splashDone, setSplashDone] = useState(false);
+  const isAuth = useSelector(selectIsAuth);
 
   useEffect(() => {
     const init = async () => {
-      // Step 1: Try to silently restore access token from refresh cookie
       try {
         const { data } = await authApi.refreshToken();
         if (data?.accessToken) {
           dispatch(setToken(data.accessToken));
+          bridgeTokenToExtension(data.accessToken);
         }
       } catch {
-        // No valid refresh token → user not logged in → that's fine
+        // No refresh cookie → not logged in
       }
-
-      // Step 2: Now fetch the current user (access token is in memory if refresh worked)
       await dispatch(fetchMe());
     };
-
     init();
   }, [dispatch]);
 
-  // Show splash for minimum 1.8s (brand moment), then hand off
+  // Bridge token whenever auth state changes (e.g. after login)
+  useEffect(() => {
+    const token = window.__accessToken;
+    if (isAuth && token) bridgeTokenToExtension(token);
+  }, [isAuth]);
+
+  // Minimum splash duration
   useEffect(() => {
     const t = setTimeout(() => setSplashDone(true), 1800);
     return () => clearTimeout(t);
