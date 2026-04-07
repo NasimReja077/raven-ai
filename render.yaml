@@ -3,23 +3,17 @@ services:
     name: raven-ai-backend
     runtime: node
     rootDir: Backend
-
     buildCommand: |
       npm install
       npx puppeteer browsers install chrome
-
     startCommand: npm start
-
     envVars:
       - key: NODE_ENV
         value: production
-
       - key: PUPPETEER_CACHE_DIR
         value: /opt/render/.cache/puppeteer
-
       - key: PUPPETEER_EXECUTABLE_PATH
         value: /opt/render/.cache/puppeteer/chrome/linux-*/chrome
-
       - key: MONGODB_URI
         sync: false
       - key: JWT_SECRET
@@ -46,3 +40,14 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+
+  - type: web
+    name: raven-ai-frontend
+    runtime: static
+    rootDir: Frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
