@@ -8,11 +8,9 @@
 @custom-variant dark (&:is(.dark *));
 
 
-/* ══════════════════════════════════════════════════════════════════════════════
-   RAVEN AI DESIGN TOKENS
-   ══════════════════════════════════════════════════════════════════════════════ */
+/*RAVEN AI DESIGN TOKENS*/
 :root {
-  /* ── Palette ─────────────────────────────────────────────────── */
+  /* ── Palette  */
   --raven-purple-50:  #f3f0ff;
   --raven-purple-100: #e0d9fe;
   --raven-purple-200: #c4b8fd;
@@ -22,7 +20,7 @@
   --raven-purple-700: #5b21b6;
   --raven-purple-900: #2e1065;
 
-  /* ── Light Mode ──────────────────────────────────────────────── */
+  /* ── Light Mode */
   --background:         #f8f7ff;
   --foreground:         #0f0a1e;
   --card:               #ffffff;

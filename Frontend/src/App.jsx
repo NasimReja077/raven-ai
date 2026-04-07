@@ -1,5 +1,4 @@
 // src/App.jsx
-
 import { RouterProvider } from "react-router-dom";
 import { Provider } from "react-redux";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -14,9 +13,7 @@ import { fetchMe, setToken, selectIsAuth } from "./features/auth/store/auth.slic
 import { authApi } from "./features/auth/api/auth.api";
 import SplashScreen from "./components/common/SplashScreen";
 
-// ── Extension token bridge ────────────────────────────────────────────────────
-// Posts the current access token to the page so the Raven browser extension
-// can pick it up via content.js without requiring the user to log in twice.
+// ── Extension token bridge
 function bridgeTokenToExtension(token) {
   if (!token) return;
   try {
@@ -29,7 +26,7 @@ function bridgeTokenToExtension(token) {
   } catch {}
 }
 
-// ── Bootstrap — refresh token on startup
+// Bootstrap — refresh token on startup
 function Bootstrap({ children }) {
   const dispatch = useDispatch();
   const [splashDone, setSplashDone] = useState(false);
