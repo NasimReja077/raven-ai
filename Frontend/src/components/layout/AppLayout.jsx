@@ -20,13 +20,15 @@ export default function AppLayout() {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <AppSidebar />
-      <SidebarInset className="flex flex-col min-h-screen overflow-hidden">
-        <Topbar />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          <Outlet />
-        </main>
-      </SidebarInset>
+      <div className="flex h-screen w-full overflow-hidden bg-background">
+        <AppSidebar />
+        <SidebarInset className="flex flex-col flex-1 min-w-0 overflow-hidden">
+          <Topbar />
+          <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6">
+            <Outlet />
+          </main>
+        </SidebarInset>
+      </div>
     </SidebarProvider>
   );
 }
