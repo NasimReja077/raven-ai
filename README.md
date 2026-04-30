@@ -23,10 +23,9 @@ An AI-powered knowledge vault that saves, organizes, and resurfaces anything fro
 Most bookmarking tools are link graveyards. You save something, forget it exists, and never see it again. **Raven is different.**
 
 Inspired by the raven — the most intelligent bird, known for hoarding shiny things, having a remarkable memory, and seeing patterns others miss — Raven doesn't just store links. It **reads**, **understands**, **connects**, and **resurfaces** your saved knowledge at the right moment.
-
 ---
 
-## ✨ Key Features
+## ✨ Key Features -
 
 ### 🔍 Smart Saving
 - **Auto Content Detection** — Automatically identifies articles, YouTube videos, PDFs, tweets, images, and GitHub repos from any URL
